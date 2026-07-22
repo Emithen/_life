@@ -38,10 +38,13 @@ def get_html(url):
 def find_channel_id(handle_url):
     html = get_html(handle_url)
     # 유튜브 페이지 형식이 여러 가지라, 아이디가 들어있을 만한 패턴을 모두 시도
+    # 주의: "이 페이지의 주인 채널"만 가리키는 externalId / canonical을 먼저 시도한다.
+    #  "channelId"는 추천·관련 채널에도 붙어 나와서 엉뚱한 채널이 먼저 잡힐 수 있음
+    #  (예: 모노 페이지에서 서브 채널이 잡히던 문제).
     patterns = [
-        r'"channelId":"(UC[0-9A-Za-z_-]{22})"',
-        r'"externalId":"(UC[0-9A-Za-z_-]{22})"',
-        r'youtube\.com/channel/(UC[0-9A-Za-z_-]{22})',
+        r'"externalId":"(UC[0-9A-Za-z_-]{22})"',            # 이 채널의 진짜 id
+        r'youtube\.com/channel/(UC[0-9A-Za-z_-]{22})',      # canonical 링크 등
+        r'"channelId":"(UC[0-9A-Za-z_-]{22})"',             # 위 둘 실패 시 차선
         r'(UC[0-9A-Za-z_-]{22})',  # 최후의 수단: 아무데서나 UC로 시작하는 아이디
     ]
     for pat in patterns:
@@ -78,6 +81,7 @@ if __name__ == "__main__":
         print("=" * 50)
         try:
             cid = find_channel_id(handle_url)
+            print(name, cid)
             for title, link in latest_videos(cid, limit=3):
                 print(f"  - {title}")
                 print(f"    {link}")
