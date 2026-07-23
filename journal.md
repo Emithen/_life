@@ -53,9 +53,10 @@
 | 날짜 | 한 일 (25분) | 메모 |
 |------|-------------|------|
 | 2026-07-20 | Day 1 완료: 수집 주제 확정 — 포챔스, 체스, 문명6, 프로그래밍 | 첫 "0이 아닌 날". 다음: 주제별 구체 채널 정하기 + 환경 준비 |
-| 2026-07-20 | Day 2 완료: 채널 9개 확정(정보수집기/channels.md), 프로젝트 폴더 생성, Python 3.10 확인 | 2일 연속! 다음(Day 3): @핸들 → channel_id 변환, RSS로 새 영상 제목+링크 가져오기 |
+| 2026-07-20 | Day 2 완료: 채널 9개 확정(collector/channels.md), 프로젝트 폴더 생성, Python 3.10 확인 | 2일 연속! 다음(Day 3): @핸들 → channel_id 변환, RSS로 새 영상 제목+링크 가져오기 |
 | 2026-07-22 | Day 3 완료: collect.py 작성 — 코딩애플 채널 @핸들→channel_id 변환 성공, RSS로 최신 영상 5개 제목+링크 출력 확인 | MVP 핵심 동작 완성! 채널 하나 됨 = 나머지는 반복. 다음(Day 4): 채널 목록을 리스트로 만들어 9개 전부 반복 출력하기 |
 | 2026-07-22 | Day 4 완료: CHANNELS 리스트 + 반복문으로 9개 채널 전부 출력. 한글 @핸들 URL 인코딩 버그 잡음(urllib.parse.quote). try/except로 실패해도 안 멈춤 | MVP 완성! 하루 만에 Day 3~4. 다음 개선 계획은 아래 "개선 계획" 참고 |
 | 2026-07-23 | 다른 기기에서 배포계획.md 작성(GitHub Actions+Pages로 폰에서 보기) + git 동기화. 배포용 channel_id 9개 하드코딩. find_channel_id 패턴 순서 버그 잡음(externalId/canonical 우선 → 추천·서브 채널 오인식 해결). 하드코딩값 검증해 서브 채널로 새던 3개(모노·눈파티·체스인사이드) 바로잡음 | channel_id는 안 바뀌니 이제 배포용 목록 확정. 다음: collect.py를 배포 뼈대대로 리팩터링(핸들 긁기 제거→UC상수+RSS만) + build_html() 추가 |
 | 2026-07-23 | collect.py 배포 뼈대대로 리팩터링: 핸들 긁기(find_channel_id/get_html) 제거→channel_id 상수 9개+RSS만. latest_videos에 날짜 추가, build_html() 추가해 index.html 저장. 로컬 실행 성공(9채널 전부, 실패 0) | 배포 체크리스트 앞 3개 완료. 다음: (선택)HTML에 모바일용 CSS → 또는 GitHub public 저장소 만들어 push + collect.yml 추가 |
 | 2026-07-23 | 🚀 배포 완료! public 저장소 Emithen/youtube-feed 생성 → collect.py + .github/workflows/collect.yml 올림 → Actions 쓰기권한 켜고 워크플로 수동 실행(23초 성공) → gh-pages 브랜치로 Pages 활성화 | 폰에서 볼 수 있는 실사이트 완성: https://emithen.github.io/youtube-feed/ · 앞으로 3시간마다 자동 갱신(cron). 다음(여유되면): 모바일용 CSS, 새 영상 강조, 마지막 갱신 시각 표시 |
+| 2026-07-24 | Mac↔Windows 인코딩 문제 정리(옵션 C): ① git pull의 한글 파일명 octal 표시는 버그 아니라 quotepath 기본값 → `core.quotepath false`. ② `.gitattributes`(줄바꿈 LF 고정)+`.gitignore` 추가로 두 기기 동작 통일. ③ 추적되던 `__pycache__/*.pyc`(Mac 3.10 바이너리) 제거. ④ collect.py에 stdout UTF-8 강제 + open에 newline="\n". ⑤ 한글 파일명 전부 영문화(정보수집기→collector, 진행노트→journal.md, 배포계획→deploy-plan.md) | 인코딩 잡음 뿌리째 제거. ⚠️ collect.py 개선은 배포 저장소(Emithen/youtube-feed)에도 복사해야 라이브 반영됨. Windows 쪽에선 clone 후 `git config core.quotepath false` 한 번 |

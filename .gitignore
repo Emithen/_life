@@ -1,0 +1,7 @@
+# Python 컴파일 결과 (기기마다 달라 충돌의 원인 — 절대 커밋하지 않는다)
+__pycache__/
+*.pyc
+
+# OS가 만드는 잡파일
+.DS_Store
+Thumbs.db
