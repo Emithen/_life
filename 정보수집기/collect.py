@@ -1,91 +1,92 @@
-# collect.py — Day 3: 채널 하나에서 최신 영상 가져오기
-# 실행: 터미널에서  python collect.py
+# collect.py — 배포용: channel_id 상수 + RSS만 읽어 index.html 생성
+# 실행: 터미널에서  python collect.py  →  같은 폴더에 index.html 생김
 #
 # 하는 일:
-#  1) @핸들 페이지를 열어서 channel_id(UC...)를 찾는다
-#  2) 그 channel_id로 RSS를 열어서 최신 영상 제목 + 링크를 뽑는다
+#  1) 채널마다 박아둔 channel_id(UC...)로 RSS를 연다  (핸들 긁기 없음)
+#  2) 최신 영상 제목 + 링크 + 날짜를 뽑는다
+#  3) 클릭 가능한 index.html 파일로 저장한다  (폰/브라우저로 열어봄)
+#
+# 왜 핸들 긁기를 뺐나:
+#  배포하면 수집 주체가 집 IP가 아니라 GitHub 데이터센터 IP다.
+#  @핸들 페이지를 긁어 channel_id를 찾는 부분이 차단당하기 쉽다.
+#  channel_id는 채널마다 절대 안 바뀌므로, 한 번 뽑아 상수로 박고 RSS만 읽는다.
+#  RSS는 유튜브 공식 경로라 데이터센터에서도 안정적이다.
 
 import urllib.request
-import urllib.parse
-import re
 import xml.etree.ElementTree as ET
 
-# 수집할 채널 목록 (주제, 이름, @핸들 주소)
-# 채널을 더 넣고 싶으면 이 리스트에 한 줄만 추가하면 됨.
+# (주제, 이름, channel_id) — channel_id는 안 바뀌므로 상수로 박아둔다.
+# 새 채널을 넣고 싶으면 로컬에서 id를 한 번 뽑아 이 리스트에 한 줄 추가하면 됨.
 CHANNELS = [
-    ("포챔스",     "모노",          "https://www.youtube.com/@moonoo22"),
-    ("포챔스",     "즈랑",          "https://www.youtube.com/@즈랑"),
-    ("포챔스",     "눈파티",        "https://www.youtube.com/@눈파티"),
-    ("체스",       "체스인사이드",  "https://www.youtube.com/@chessinside"),
-    ("체스",       "체스프릭",      "https://www.youtube.com/@chessfreak"),
-    ("문명6",      "문명한입",      "https://www.youtube.com/@Civ6OneBite"),
-    ("문명6",      "전구냥",        "https://www.youtube.com/@전구냥"),
-    ("프로그래밍", "코드깎는노인",  "https://www.youtube.com/@코드깎는노인"),
-    ("프로그래밍", "코딩애플",      "https://www.youtube.com/@codingapple"),
+    ("포챔스",     "모노",          "UCfKTcDDUzjMpPmV4KuOhkFg"),
+    ("포챔스",     "즈랑",          "UCsBRzl28bxwukBr8bXYXbYA"),
+    ("포챔스",     "눈파티",        "UCd6CX2LiQE2dEAPXwk2N0jg"),
+    ("체스",       "체스인사이드",  "UCnUPEKHg9B8Ut75rsgqXWYw"),
+    ("체스",       "체스프릭",      "UCO5rDIUWfCX7gsCzURXMUCg"),
+    ("문명6",      "문명한입",      "UCc_tGAM6z-s-GCc6A6irdeg"),
+    ("문명6",      "전구냥",        "UC3IJEZgLfSVgLdEXe8XbYag"),
+    ("프로그래밍", "코드깎는노인",  "UCRpOIr-NJpK9S483ge20Pgw"),
+    ("프로그래밍", "코딩애플",      "UCSLrpBAzr-ROVGHQ5EmxnUg"),
 ]
 
 # 유튜브가 브라우저인 척 해야 잘 열림
 HEADERS = {"User-Agent": "Mozilla/5.0"}
+NS = {"a": "http://www.w3.org/2005/Atom"}
 
 
-def get_html(url):
-    # 한글 등 ASCII가 아닌 글자를 URL용으로 안전하게 변환 (예: 한글 @핸들)
-    url = urllib.parse.quote(url, safe=":/?=&@")
+def latest_videos(channel_id, limit=3):
+    """channel_id로 RSS를 열어 최신 영상 (제목, 링크, 날짜)을 뽑는다."""
+    url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     req = urllib.request.Request(url, headers=HEADERS)
-    return urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "ignore")
+    xml = urllib.request.urlopen(req, timeout=20).read()
 
-
-def find_channel_id(handle_url):
-    html = get_html(handle_url)
-    # 유튜브 페이지 형식이 여러 가지라, 아이디가 들어있을 만한 패턴을 모두 시도
-    # 주의: "이 페이지의 주인 채널"만 가리키는 externalId / canonical을 먼저 시도한다.
-    #  "channelId"는 추천·관련 채널에도 붙어 나와서 엉뚱한 채널이 먼저 잡힐 수 있음
-    #  (예: 모노 페이지에서 서브 채널이 잡히던 문제).
-    patterns = [
-        r'"externalId":"(UC[0-9A-Za-z_-]{22})"',            # 이 채널의 진짜 id
-        r'youtube\.com/channel/(UC[0-9A-Za-z_-]{22})',      # canonical 링크 등
-        r'"channelId":"(UC[0-9A-Za-z_-]{22})"',             # 위 둘 실패 시 차선
-        r'(UC[0-9A-Za-z_-]{22})',  # 최후의 수단: 아무데서나 UC로 시작하는 아이디
-    ]
-    for pat in patterns:
-        m = re.search(pat, html)
-        if m:
-            return m.group(1)
-    # 다 실패하면 받은 HTML을 파일로 저장 → 같이 열어보기
-    with open("debug_page.html", "w", encoding="utf-8") as f:
-        f.write(html)
-    raise RuntimeError(
-        f"channel_id를 못 찾았어요. 받은 HTML 길이={len(html)}. "
-        "debug_page.html 로 저장했으니 그 파일을 확인해봐요."
-    )
-
-
-def latest_videos(channel_id, limit=5):
-    rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-    xml = get_html(rss_url)
     root = ET.fromstring(xml)
-    ns = {"a": "http://www.w3.org/2005/Atom"}
     videos = []
-    for entry in root.findall("a:entry", ns)[:limit]:
-        title = entry.find("a:title", ns).text
-        link = entry.find("a:link", ns).attrib["href"]
-        videos.append((title, link))
+    for entry in root.findall("a:entry", NS)[:limit]:
+        title = entry.find("a:title", NS).text
+        link = entry.find("a:link", NS).attrib["href"]
+        published = entry.find("a:published", NS).text[:10]  # YYYY-MM-DD
+        videos.append((title, link, published))
     return videos
 
 
+def build_html(sections):
+    """sections = [(주제, 이름, [(title, link, date), ...]), ...] → HTML 문자열."""
+    rows = []
+    for topic, name, videos in sections:
+        rows.append(f"<h2>[{topic}] {name}</h2>")
+        for title, link, date in videos:
+            rows.append(
+                f'<p><a href="{link}" target="_blank" rel="noopener">{title}</a>'
+                f' <small>{date}</small></p>'
+            )
+
+    body = "\n".join(rows)
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>최신 영상 모음</title>
+</head>
+<body>
+  <h1>최신 영상 모음</h1>
+  {body}
+</body>
+</html>"""
+
+
 if __name__ == "__main__":
-    # 채널을 하나씩 돌면서 최신 영상을 가져온다.
-    for topic, name, handle_url in CHANNELS:
-        print("=" * 50)
-        print(f"[{topic}] {name}")
-        print("=" * 50)
+    # 채널을 하나씩 돌며 수집 → 한 채널이 실패해도 멈추지 않고 계속.
+    sections = []
+    for topic, name, cid in CHANNELS:
         try:
-            cid = find_channel_id(handle_url)
-            print(name, cid)
-            for title, link in latest_videos(cid, limit=3):
-                print(f"  - {title}")
-                print(f"    {link}")
+            videos = latest_videos(cid, limit=3)
         except Exception as e:
-            # 한 채널이 실패해도 멈추지 않고 다음 채널로 넘어감
-            print(f"  (실패: {e})")
-        print()
+            videos = [(f"(수집 실패: {e})", "#", "")]
+        sections.append((topic, name, videos))
+
+    html = build_html(sections)
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)  # ← 이 파일을 GitHub Pages가 공개함
+    print("index.html 생성 완료")
