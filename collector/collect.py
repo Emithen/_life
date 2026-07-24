@@ -15,6 +15,7 @@
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
+from datetime import datetime, timezone, timedelta
 
 # 한글 출력이 어디서든 안 깨지게 UTF-8 강제.
 # (Windows 터미널 기본 cp949, GitHub Actions의 C 로케일에서 print가 터지는 것 방지)
@@ -70,6 +71,7 @@ def build_html(sections):
             )
 
     body = "\n".join(rows)
+    now = datetime.now(timezone(timedelta(hours=9))).strftime("%Y-%m-%d %H:%M")
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -79,6 +81,7 @@ def build_html(sections):
 </head>
 <body>
   <h1>최신 영상 모음</h1>
+  <p><small>업데이트: {now} (KST)</small></p>
   {body}
 </body>
 </html>"""

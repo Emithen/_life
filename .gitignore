@@ -5,3 +5,4 @@ __pycache__/
 # OS가 만드는 잡파일
 .DS_Store
 Thumbs.db
+/youtube-feed/
