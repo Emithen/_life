@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `d0e4b93` · 2026-07-28
+> 기준: youtube-feed `600a298` · 2026-07-28
 
 ## 한 줄
 
@@ -23,31 +23,35 @@
 ## 배포 구조
 
 ```
-youtube-feed [main 브랜치]  ← 재료: collect.py, index.html, app.js, workflow
+youtube-feed [main 브랜치]  ← 재료: index.html, app.js, workflow
         │
-        │  트리거: ① main에 push  ② 3시간마다 cron
+        │  트리거: main에 push  (cron은 2026-07-28에 중단)
         ▼
-   GitHub Actions (임시 리눅스)
-        │  python collect.py 실행 → data.json 생성
+   GitHub Actions (임시 리눅스) — 지금은 배포만 함
         ▼
 youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직접 건드릴 일 없음)
         │
         ▼
    GitHub Pages 가 웹에 게시 → 폰 브라우저
+        │
+        └─ 페이지가 열리면 app.js가 내 Worker를 불러 영상 목록을 실시간으로 받아옴
 ```
 
-- 서버가 상시 떠 있지 않다. cron이 울릴 때만 잠깐 실행 → **무료·관리 0**.
-- 폰에서 보는 건 실시간이 아니라 **마지막 실행 시점의 스냅샷**.
+- 서버가 상시 떠 있지 않다 → **무료·관리 0**.
+- 영상 목록은 **페이지를 열 때마다 실시간**으로 가져온다 (Worker 경유).
 
-## 데이터가 흐르는 길이 두 개다 ⭐ 가장 중요한 구조
+## 데이터 경로 — 지금은 하나뿐 (2026-07-28 변경)
 
-| | 추천 채널 (프리셋 9개) | 내 채널 (사용자가 추가) |
+| | 내 채널 (현재 유일) | ~~추천 채널 (프리셋 9개)~~ **중단됨** |
 |---|---|---|
-| 언제 수집 | **미리** (Actions, 3시간마다) | **볼 때** (브라우저에서 즉시) |
-| 만든 주체 | `collect.py` (서버) | `app.js` (브라우저) + 릴레이 |
-| 저장 위치 | `data.json` (저장소에 커밋됨) | `localStorage` (그 브라우저에만) |
-| 속도·안정성 | 빠르고 거의 안 터짐 | 느리고 실패 가능 |
-| 아키텍처 유형 | L2 (주기 갱신 정적) | L3+L4 (요청시 동적 + 클라 개인화) |
+| 언제 수집 | **볼 때** (브라우저에서 즉시) | ~~미리 (Actions, 3시간마다)~~ |
+| 만든 주체 | `app.js` + 내 Worker | ~~`collect.py` (서버)~~ |
+| 저장 위치 | `localStorage` (그 브라우저에만) | ~~`data.json`~~ |
+| 아키텍처 유형 | L3+L4 (요청시 동적 + 클라 개인화) | ~~L2 (주기 갱신 정적)~~ |
+
+추천 채널은 "지금 필요 없다"고 판단해 **화면에서 빼고 수집도 멈췄다**.
+`collect.py`·`data.json`은 **삭제하지 않고 저장소에 보관** 중이고,
+`collect.yml`의 주석만 풀면 되살아난다. → 두 경로를 비교한 설명은 `10-flow-and-contracts.md`
 
 자세히: `10-flow-and-contracts.md` · 유형 정의: `../../service-architecture-types.md`
 
@@ -55,13 +59,13 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 
 | 파일 | 하는 일 |
 |---|---|
-| `collect.py` | 채널 9개 RSS 수집 → `data.json` 생성. **HTML을 전혀 모른다** |
-| `data.json` | 수집 결과. 파이썬과 화면 사이의 **계약(contract)** |
 | `index.html` | 손으로 쓴 정적 껍데기 (CSS + 채널 추가 폼) |
-| `app.js` | `data.json`을 fetch해 그리고, 내 채널은 릴레이로 직접 가져와 그림 |
-| `worker/rss-proxy.js` | 내 전용 RSS 릴레이 (Cloudflare Worker) |
-| `.github/workflows/collect.yml` | cron·push 트리거 → 수집 → gh-pages 게시 |
+| `app.js` | localStorage의 내 채널을 Worker로 가져와 렌더 |
+| `worker/rss-proxy.js` | 내 전용 RSS 릴레이 (Cloudflare Worker) — 채널 해석·파싱 담당 |
+| `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
+| ~~`collect.py`~~ | 휴면. 채널 9개 RSS 수집 → `data.json` 생성 (지금 실행 안 됨) |
+| ~~`data.json`~~ | 휴면. 마지막 수집 결과가 남아 있음 (화면이 읽지 않음) |
 
 ## 지금 상태 (2026-07-28)
 
