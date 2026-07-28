@@ -1,6 +1,6 @@
 # 겪은 함정들 (실제로 터진 것만)
 
-> 기준: youtube-feed `3f9b627` · 2026-07-28
+> 기준: youtube-feed `d0e4b93` · 2026-07-28
 > 전부 실제로 겪고 고친 것. 같은 실수를 반복하지 않으려고 남긴다.
 
 ## 1. `.gitignore`가 배포 결과물을 삼켜 404 (2026-07-24)
@@ -52,7 +52,37 @@
 `<feed>` 머리의 `<yt:channelId>`엔 `UC`가 빠져 있다. 엔트리 안에는 정상.
 → channel_id는 RSS에서 읽지 말고 **입력에서 확정한 값**을 쓴다.
 
-## 8. GitHub Actions Node 20 지원 종료 경고 (미해결·무해)
+## 8. 채널 페이지에서 엉뚱한 채널 ID를 집음 — **4번의 재발** (2026-07-28)
+
+Worker에서 `@핸들 → channel_id`를 찾을 때 **첫 `"channelId"`**를 집었더니 추천 채널이 잡혔다.
+- `@mkbhd` → The Studio ❌ / `@veritasium` → 프랑스어판 ❌ (페이지 안에 UC가 6~12개나 들어있음)
+- **해결 순서**: `rel="canonical"` 링크(페이지의 진짜 주인) → `"externalId"` → `"channelId"`(최후)
+- 교훈: 4번과 **정확히 같은 실수를 5일 만에 반복**했다. 남의 HTML에서 값을 뽑을 땐
+  "먼저 나오는 것"이 아니라 **"의미상 권위 있는 것"**을 골라야 한다.
+
+## 9. Worker CPU 한도 초과 → `Failed to fetch` (2026-07-28)
+
+유튜브 채널 페이지는 **2.4MB**. 정규식으로 전체를 훑으니 Worker CPU 한도(10ms)를 넘겨 죽었고,
+그 경우 Cloudflare가 CORS 헤더 없는 에러 페이지를 반환해 브라우저엔 `Failed to fetch`로 보인다.
+- **해결**: `indexOf`(네이티브 검색)로 위치만 찾고 그 뒤 40글자만 정규식 검사.
+- 교훈: 큰 문자열에 정규식을 함부로 돌리지 않는다. `Failed to fetch`는 **CORS 헤더가 없는 응답**의 증상이기도 하다.
+
+## 10. `Vary: Origin` 누락 — 캐시가 CORS를 깨뜨림 (2026-07-28)
+
+응답의 `Access-Control-Allow-Origin`은 요청 Origin마다 다른데 `Vary: Origin`이 없었다.
+→ **localhost에서 만든 응답이 캐시되어 github.io 요청에 재사용** → ACAO 불일치 → `Failed to fetch`.
+- **해결**: `Vary: Origin` 추가.
+- 함께: 에러 응답은 `Cache-Control: no-store`. 안 그러면 일시적 장애가 10분간 굳는다.
+- 교훈: **응답 헤더가 요청에 따라 달라지면 반드시 `Vary`를 붙인다.**
+
+## 11. 수정 직후의 "안 고쳐졌는데?" 착시 (2026-07-28)
+
+Worker를 고쳐 배포했는데 브라우저에선 여전히 옛 결과가 나왔다.
+- 원인 ①: 응답 `max-age=600` 때문에 **브라우저가 10분간 옛 응답을 보관**. (`{cache:"reload"}`로 확인 가능)
+- 원인 ②: Cloudflare 배포 **전파에 ~20초**. 배포 직후 즉시 확인하면 옛 코드가 응답한다.
+- 교훈: 배포 직후 검증은 **캐시 우회 + 잠깐 대기** 두 가지를 챙긴다.
+
+## 12. GitHub Actions Node 20 지원 종료 경고 (미해결·무해)
 
 `actions/checkout@v4`, `actions/setup-python@v5`가 Node 20 대상이라 경고가 뜬다.
 지금은 강제로 Node 24에서 돌아 문제없음. 언젠가 액션 버전을 올리면 사라진다.

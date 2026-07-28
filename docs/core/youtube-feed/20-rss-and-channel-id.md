@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `3f9b627` · 2026-07-28
+> 기준: youtube-feed `d0e4b93` · 2026-07-28
 
 ## 1. RSS란
 
@@ -58,15 +58,20 @@ https://www.youtube.com/feeds/videos.xml?channel_id=UC....
 입력
  ├─ 1) "UCabc..." 형태?            → 그대로 사용         (정규식 /^UC[\w-]{20,}$/)
  ├─ 2) URL에 "/channel/UC..."?     → 잘라냄
- └─ 3) "@핸들" / 커스텀 URL?        → ⚠️ 채널 페이지(~1MB)를 받아
-                                      HTML 속 "channelId":"UC..." 를 정규식으로 추출
+ └─ 3) "@핸들" / 커스텀 URL?        → ⚠️ 채널 페이지(2.4MB)를 받아 HTML에서 추출
+        └ 우선순위: rel="canonical" → "externalId" → "channelId"(최후)
+           찾을 땐 indexOf로 위치만 잡고 그 뒤 40글자만 검사 (CPU 절약)
    ↓
 channel_id 확정 → RSS 주소 조립 → 수집 → 파싱
 ```
 
 **3번이 왜 "긁기"뿐인가**: 유튜브는 공식 API 없이 `@핸들 → channel_id` 변환을 제공하지 않는다.
-그래서 페이지 HTML에 들어있는 값을 찾아 쓴다. → **가장 느리고 약한 지점**
-(1MB 다운로드 + 유튜브가 HTML 구조를 바꾸면 깨질 수 있음).
+그래서 페이지 HTML에 들어있는 값을 찾아 쓴다. → **가장 느리고 약한 지점.**
+
+⚠️ **함정 두 개 (둘 다 실제로 터짐 — `90-gotchas.md` 8·9번)**
+1. 페이지 안엔 **추천 채널의 ID도 6~12개** 들어있다. 먼저 나오는 `"channelId"`를 집으면
+   엉뚱한 채널이 잡힌다(`@mkbhd`→The Studio). → **`canonical`이 그 페이지의 진짜 주인.**
+2. 2.4MB 전체에 정규식을 돌리면 Worker CPU 한도(10ms)를 넘겨 죽는다. → `indexOf`로 좁힌 뒤 검사.
 
 ### 그래서 Worker가 큰 개선인 이유
 
