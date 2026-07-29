@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `600a298` · 2026-07-28
+> 기준: youtube-feed `0568c3f` · 2026-07-28
 
 ## 1. RSS란
 
@@ -35,9 +35,11 @@ https://www.youtube.com/feeds/videos.xml?channel_id=UC....
 | RSS 위치 | → 우리 필드 |
 |---|---|
 | 첫 `<entry>` 앞의 `<title>` | `name` |
+| `<entry>`의 `<yt:videoId>` | `videos[].id` (본 영상 기록의 열쇠) |
 | `<entry>`의 `<title>` | `videos[].title` |
 | `<entry>`의 `<link rel="alternate" href>` | `videos[].link` |
-| `<entry>`의 `<published>` 앞 10글자 | `videos[].date` |
+| `<entry>`의 `<published>` 앞 10글자 | `videos[].date` (표시용) |
+| `<entry>`의 `<published>` 전체 | `videos[].published` (24시간 이내 판단용) |
 
 ### ⚠️ 유튜브의 실제 버그 하나
 
