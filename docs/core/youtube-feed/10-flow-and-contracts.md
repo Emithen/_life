@@ -1,6 +1,6 @@
 # 데이터 흐름과 계약(contract)
 
-> 기준: youtube-feed `5ca5d16` · 2026-07-30
+> 기준: youtube-feed `3b7f8cb` · 2026-07-30
 
 ## 1. 두 경로가 근본적으로 다른 이유
 

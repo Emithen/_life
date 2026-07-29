@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `5ca5d16` · 2026-07-30
+> 기준: youtube-feed `3b7f8cb` · 2026-07-30
 
 ## 1. RSS란
 
