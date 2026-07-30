@@ -1,6 +1,6 @@
 # CORS·릴레이·캐싱
 
-> 기준: youtube-feed `3b7f8cb` · 2026-07-30
+> 기준: youtube-feed `c3bdd65` · 2026-07-30
 
 ## 1. CORS — 왜 릴레이가 필요한가
 
