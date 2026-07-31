@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `bcd9205` · 2026-07-31
+> 기준: youtube-feed `38dc1e6` · 2026-07-31
 
 ## 한 줄
 
@@ -64,6 +64,7 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | `src/app.js` | **화면만.** DOM을 만들고 이벤트를 붙인다. `fetch`도 `localStorage`도 직접 안 쓴다 |
 | `src/worker.js` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약·50개씩 쪼개기 |
 | `src/storage.js` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
+| `src/youtube.js` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** 구독 목록·재생목록·영상 |
 | `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). `/rss` 채널 · `/playlist` 재생목록 · `/videos` ID묶음 |
 | `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
@@ -76,8 +77,10 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 **"바깥 세계와 닿는 곳"을 각각 한 파일로 몰았다.** 화면은 그 둘을 통해서만 바깥과 만난다.
 
 ```
-app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유튜브
-   │                 (바깥: 네트워크)
+app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유튜브 RSS   (키는 서버에)
+   │                 (바깥: 네트워크 — RSS)
+   ├────import────▶  youtube.js  ──▶  유튜브 Data API 직접        (토큰은 브라우저에)
+   │                 (바깥: 네트워크 — 내 계정)
    └────import────▶  storage.js  ──▶  localStorage
                      (바깥: 저장소)
 ```
@@ -111,8 +114,18 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 - ✅ **모듈 분리** (2026-07-31) — `worker.js`(네트워크)·`storage.js`(저장)를 떼어냄. `type="module"` 전환
   - `app.js` 147줄 감소. 반복되던 응답 해석 4줄 ×3, 본 영상 읽고-쓰고-저장 ×3이 함수 하나씩으로
   - ⚠️ 캐시 버스팅 지점이 3곳으로 늘었다(index.html + import 2곳) → `90-gotchas.md` 2번
-- 🎯 다음: ① 내보내기/가져오기 ② **로그인(국면 B, Supabase)** — L4 → **L5**
-- 🔜 대기: 통합 타임라인(전체 최신순)·주제 필터, 썸네일, 배치 요청
+- ✅ **구글 로그인(OAuth) + 구독 채널 가져오기** (2026-07-31) — 손으로 채널을 추가하던 작업이 사라짐
+  - 스코프는 `youtube.readonly` 하나. 이것으로 구독·재생목록·영상 조회가 전부 커버된다
+  - 클라이언트 시크릿을 쓰지 않는 **브라우저 토큰 플로우** → 백엔드 없이 정적 사이트에서 동작
+  - 토큰은 1시간, localStorage에 저장하지 않고 **메모리에만**. 열 때 조용히 재발급
+  - ⛔ 로그인해도 **WL은 여전히 못 읽는다** → watchme 우회는 그대로 유지
+- 🎯 다음: **OAuth 일원화 마무리** — 재생목록·영상 조회를 Worker에서 걷어내고 `YT_API_KEY` 제거
+- 🔜 대기: 내보내기/가져오기, 기기 동기화(Supabase, L5), 통합 타임라인·주제 필터, 썸네일
+
+> **"로그인"이 두 가지라 헷갈리기 쉽다.**
+> ① **구글 OAuth**(완료) = 내 유튜브 데이터를 읽을 인가. 백엔드 불필요.
+> ② **기기 동기화 로그인**(미착수) = 내 앱 데이터를 서버에 두는 것. Supabase가 필요한 건 이쪽.
+> 로드맵에 한 덩어리로 적혀 있었으나 서로 다른 물건이고, ①만으로 L5가 되지는 않는다.
 
 ## localStorage에 저장되는 것 (내보내기·로그인 때 옮길 대상)
 
