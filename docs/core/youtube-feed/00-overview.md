@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `38dc1e6` · 2026-07-31
+> 기준: youtube-feed `54736f0` · 2026-07-31
 
 ## 한 줄
 
@@ -35,6 +35,7 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
    GitHub Pages 가 웹에 게시 → 폰 브라우저
         │
         └─ 페이지가 열리면 src/app.js가 내 Worker를 불러 영상 목록을 실시간으로 받아옴
+           (로그인했다면 풀 채우기는 유튜브 Data API를 브라우저가 직접 부른다)
 ```
 
 - 서버가 상시 떠 있지 않다 → **무료·관리 0**.
@@ -65,7 +66,7 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | `src/worker.js` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약·50개씩 쪼개기 |
 | `src/storage.js` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
 | `src/youtube.js` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** 구독 목록·재생목록·영상 |
-| `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). `/rss` 채널 · `/playlist` 재생목록 · `/videos` ID묶음 |
+| `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). **`/rss` 하나뿐** — 07-31에 Data API 갈래 제거 |
 | `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
 
@@ -119,8 +120,13 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
   - 클라이언트 시크릿을 쓰지 않는 **브라우저 토큰 플로우** → 백엔드 없이 정적 사이트에서 동작
   - 토큰은 1시간, localStorage에 저장하지 않고 **메모리에만**. 열 때 조용히 재발급
   - ⛔ 로그인해도 **WL은 여전히 못 읽는다** → watchme 우회는 그대로 유지
-- 🎯 다음: **OAuth 일원화 마무리** — 재생목록·영상 조회를 Worker에서 걷어내고 `YT_API_KEY` 제거
-- 🔜 대기: 내보내기/가져오기, 기기 동기화(Supabase, L5), 통합 타임라인·주제 필터, 썸네일
+- ✅ **OAuth 일원화** (2026-07-31) — 재생목록·영상 조회를 Worker에서 걷어냄. `YT_API_KEY` 삭제
+  - Worker는 **RSS 전용**으로 축소(코드 146줄 감소). 릴레이의 존재 이유가 **CORS 하나만** 남았다
+  - 풀을 **채우려면** 로그인 필요. 단 **랜덤 뽑기·채널 목록은 로그인 없이도 된다**
+  - 대신 쿼터가 내 계정에서 나가고, **비공개 재생목록도 읽힌다**
+- 🎯 다음: 내보내기/가져오기, 기기 동기화(Supabase, L5)
+- 🔜 대기: `@핸들 → channel_id`를 `channels.list?forHandle`로 이전(Worker의 최대 약점 제거),
+  통합 타임라인·주제 필터, 썸네일
 
 > **"로그인"이 두 가지라 헷갈리기 쉽다.**
 > ① **구글 OAuth**(완료) = 내 유튜브 데이터를 읽을 인가. 백엔드 불필요.

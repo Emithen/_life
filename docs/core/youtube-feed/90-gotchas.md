@@ -1,6 +1,6 @@
 # 겪은 함정들 (실제로 터진 것만)
 
-> 기준: youtube-feed `38dc1e6` · 2026-07-31
+> 기준: youtube-feed `54736f0` · 2026-07-31
 > 전부 실제로 겪고 고친 것. 같은 실수를 반복하지 않으려고 남긴다.
 
 ## 1. `.gitignore`가 배포 결과물을 삼켜 404 (2026-07-24)
@@ -28,12 +28,13 @@
 - 실무에선 빌드 도구가 파일명에 해시를 붙여 자동화하는 영역.
 
 **2026-07-31 모듈 분리로 이 함정의 면적이 넓어졌다** (아직 안 당했지만 구조가 똑같다):
-`<script type="module" src="src/app.js?v=11">`의 `?v=`는 **app.js에만** 붙는다.
+`<script type="module" src="src/app.js?v=13">`의 `?v=`는 **app.js에만** 붙는다.
 `import "./worker.js"`는 쿼리 없이 요청되므로 **새 app.js + 캐시된 옛 worker.js** 조합이 나올 수 있다
 — 위에서 실제로 겪은 사고와 정확히 같은 모양이다.
 
-- **그래서**: import 경로에도 같은 버전을 단다 → `import {...} from "./worker.js?v=11"`
-- 버전 올릴 곳이 **3군데**다: `index.html` 1곳 + `app.js`의 import 2곳. 하나라도 빠지면 위 사고가 난다.
+- **그래서**: import 경로에도 같은 버전을 단다 → `import {...} from "./worker.js?v=13"`
+- 버전 올릴 곳이 **4군데**다: `index.html` 1곳 + `app.js`의 import 3곳
+  (`worker.js`·`storage.js`·`youtube.js`). 모듈이 늘 때마다 이 숫자가 커진다 — 하나라도 빠지면 위 사고가 난다.
 - 교훈: **"버전을 손으로 여러 곳에 맞추는 상태"는 오래 못 간다.** 이게 귀찮아지는 순간이
   빌드 도구를 들일 신호다(파일명 해시를 자동으로 붙여준다). 지금은 파일 3개라 감당된다.
 - 곁가지: 모듈은 `file://`로 안 열린다(CORS). 확인은 반드시 로컬 서버로.
@@ -140,6 +141,40 @@ Worker를 고쳐 배포했는데 브라우저에선 여전히 옛 결과가 나�
   (`60100393090-...` → 프로젝트 번호 `60100393090`). 콘솔에서 이 번호부터 맞춰놓고 손댄다.
 - 테스트 모드로 계속 둬도 된다. 알려진 제약인 **refresh token 7일 만료는 우리와 무관**하다 —
   브라우저 토큰 플로우라 refresh token을 애초에 안 받는다.
+
+## 16. Cloudflare에 **엉뚱한 파일**을 붙여넣어 Worker가 통째로 죽음 (2026-07-31)
+
+일원화 배포 중 Worker의 모든 경로가 404가 됐다. 채널 추가가 `Failed to fetch`로 실패.
+대시보드는 멀쩡해 보였다 — 라우트 켜짐, Active deployment 100%, **Error Rate 0%**.
+
+원인: Cloudflare 에디터에 `worker/rss-proxy.js`(진짜 Worker)가 아니라
+**`src/worker.js`(브라우저에서 Worker를 *부르는* 쪽)** 를 붙여넣었다.
+그 파일엔 `export default { fetch }`가 없어서 **요청을 받을 핸들러가 없는 상태**가 됐고,
+Cloudflare가 자기 기본 404 HTML을 돌려줬다. 미리보기 창에 답이 떠 있었다:
+`The requested module 'worker.js' does not provide an export named 'default'`
+
+- **`Error Rate 0%`가 오히려 결정적 단서였다.** 요청이 핸들러에 닿아 실패한 거라면 에러율이 올라간다.
+  0%라는 건 **요청이 Worker까지 아예 안 갔다**는 뜻 → 코드가 아니라 "핸들러/라우팅"을 의심해야 한다.
+- **헬스체크(`/`)가 진단을 반으로 줄인다.** 파라미터도 키도 필요 없는 경로가 404면 코드 문제가 아니다.
+  `/`가 살아 있고 `usage`에 `/rss` 하나만 나오면 지금 코드가 맞다.
+- 이건 **15번과 같은 독법**이다 — 오류를 "무엇이 실패했나"가 아니라 **"어디까지 갔나"**로 읽는다.
+  두 번 연속 이 방법으로 잡았으니 기본기로 삼는다.
+- `Failed to fetch`로 보인 이유는 9·10번과 동일 — Cloudflare 404 HTML엔 **CORS 헤더가 없다.**
+
+### 왜 헷갈렸나 (이름이 함정이었다)
+
+`src/worker.js`(부르는 쪽)와 `worker/rss-proxy.js`(진짜 Worker)가 둘 다 "worker"다.
+게다가 **Cloudflare 에디터의 탭 이름이 `worker.js`** 라서 "worker.js를 붙여넣으면 되겠지"가 자연스러웠다.
+
+- `src/relay.js`로 개명하는 안이 있었으나 **하지 않기로 했다**(2026-07-31 판단).
+  → 이름은 그대로이므로 **붙여넣기 전에 이 두 줄을 눈으로 확인한다**:
+
+```js
+export default {
+  async fetch(request) {
+```
+
+이게 없으면 Worker가 아니라 브라우저 모듈이다. **`export default`가 곧 "이건 Worker다"의 표식.**
 
 ## 12. GitHub Actions Node 20 지원 종료 경고 (미해결·무해)
 

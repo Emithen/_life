@@ -1,6 +1,6 @@
 # 데이터 흐름과 계약(contract)
 
-> 기준: youtube-feed `38dc1e6` · 2026-07-31
+> 기준: youtube-feed `54736f0` · 2026-07-31
 
 ## 1. 두 경로가 근본적으로 다른 이유
 
@@ -46,8 +46,9 @@
 
 ```
 [가져오기: 둘 중 아무거나, 여러 번 해도 됨]
-   ① WL 화면에서 뽑은 영상 ID 붙여넣기 → /videos (50개씩 나눠서)
-   ② watchme 재생목록 동기화        → /playlist (전체 페이지 순회)
+   ① WL 화면에서 뽑은 영상 ID 붙여넣기 → videos.list (50개씩 나눠서)
+   ② watchme 재생목록 동기화        → playlistItems.list (전체 페이지 순회)
+   ※ 둘 다 **로그인 필요**(2026-07-31 일원화). 대신 비공개 재생목록도 읽힌다.
    → 둘 다 같은 모양의 videos[]를 돌려줌 → laterPool에 병합(id 기준 중복 제거)
 [추천할 때]
    → 네트워크 없이 laterPool에서 무작위 1개 (본 영상은 후보에서 제외)
@@ -100,25 +101,28 @@ GET /rss?ch=<채널ID|@핸들|URL>&limit=6
 `data.json`의 `sections` 한 칸과 **같은 모양**. 그래서 화면은 추천 채널이든 내 채널이든
 **같은 렌더 함수 하나로** 처리한다.
 
-### 풀을 채우는 두 엔드포인트도 같은 `videos[]`를 준다 (2026-07-31 추가)
+### 풀을 채우는 두 호출도 같은 `videos[]`를 준다
 
 ```
-GET /playlist?id=<재생목록ID|URL>          ← 전체 순회(최대 1000개), YouTube Data API
-→ { "playlistId": "PL...", "count": 355, "skipped": 3,
-    "videos": [ { "id","title","link","date","published","channel" } ] }
+fetchPlaylist(id)   ← 전체 순회(최대 1000개), YouTube Data API playlistItems.list
+→ { playlistId, count: 355, skipped: 3,
+    videos: [ { id, title, link, date, published, channel } ] }
 
-GET /videos?ids=<ID,ID,...>               ← 최대 50개(= API 1회 호출 = 1 unit)
-→ { "count": 50, "missing": ["xxxxxxxxxxx"],
-    "videos": [ { "id","title","link","date","published","channel" } ] }
+fetchVideos(ids)    ← 최대 50개(= API 1회 호출 = 1 unit), videos.list
+→ { count: 50, missing: ["xxxxxxxxxxx"],
+    videos: [ { id, title, link, date, published, channel } ] }
 ```
+
+⚠️ 이 둘은 **2026-07-31에 Worker(`/playlist`·`/videos`)에서 `src/youtube.js`로 옮겨갔다.**
+모양은 그대로다 — 그래서 화면 코드가 안 바뀌었다. 자세히는 아래 "같은 계약, 다른 출처".
 
 - `videos[]`의 모양은 `/rss`와 **같다**. 다만 풀에는 **여러 채널이 섞이므로** `channel`(채널명)이 하나 더 붙는다.
   → 채널별 목록에선 채널명이 제목 위에 한 번만 나오면 되지만, 풀에선 영상마다 필요하다.
 - **"못 가져온 것"도 계약에 넣었다** — `/videos`의 `missing`(요청했는데 안 돌아온 ID),
   `/playlist`의 `skipped`(비공개·삭제라 건너뛴 개수). 조용히 사라지면 사용자가
   "왜 516개 넣었는데 500개지?"를 알 수 없다. **빠진 이유를 셈해서 돌려주는 것도 계약의 일부.**
-- 50개 넘는 ID는 **호출자가 나눠서** 부른다(`src/worker.js`의 `fetchVideosChunked`).
-  Worker는 51개 이상이면 400으로 거절한다 — 한도를 서버가 명시하고, 쪼개는 책임은 호출자가 진다.
+- 50개 넘는 ID는 **호출자가 나눠서** 부른다(`src/youtube.js`의 `fetchVideosChunked`).
+  50개는 Data API가 정한 한도다 — 한도는 서버가 정하고, 쪼개는 책임은 호출자가 진다.
 
 ### 계약의 화면 쪽 끝은 `src/worker.js` 하나다 (2026-07-31 모듈 분리)
 
@@ -126,28 +130,32 @@ GET /videos?ids=<ID,ID,...>               ← 최대 50개(= API 1회 호출 = 1
 예전엔 화면 쪽 끝이 세 군데로 흩어져 있었고(그중 둘은 버튼 핸들러 안), 응답 해석 4줄이 복사돼 있었다.
 
 ```js
-// src/worker.js — 이 셋이 계약의 전부. 화면은 URL을 모른다.
-export const fetchChannel  = (ch)  => get("/rss", { ch, limit: LIMIT });
-export const fetchPlaylist = (id)  => get("/playlist", { id });
-export const fetchVideos   = (ids) => get("/videos", { ids: ids.join(",") });
+// src/worker.js — 2026-07-31 일원화 이후 이것 하나만 남았다. 화면은 URL을 모른다.
+export const fetchChannel = (ch) => get("/rss", { ch, limit: LIMIT });
 ```
 
 - **에러도 계약이다** — `get()`이 `err.notFound` 같은 **판정**만 붙여 넘기고,
   한국어 문장은 화면이 만든다. 같은 실패라도 채널 추가와 재생목록 동기화는 할 말이 다르기 때문.
-- `CHUNK = 50`처럼 **Worker가 정한 한도**도 여기 산다. 화면의 사정이 아니라 계약의 일부다.
+- **서버가 정한 한도는 화면이 아니라 창구가 안다.** `CHUNK = 50`은 지금 `src/youtube.js`에 있다
+  (Data API의 한도라서). 화면의 사정이 아니라 계약의 일부다.
 
 ### 같은 계약, 다른 출처 — 계약이 값을 한 순간 ⭐ (2026-07-31)
 
 구글 로그인을 붙이면서 `src/youtube.js`가 생겼다. 이 모듈의 `fetchPlaylist`·`fetchVideos`는
-**`worker.js`와 글자 그대로 같은 모양**을 돌려준다. 그래서 출처를 바꾸는 코드가 이게 전부다:
+**`worker.js`가 주던 것과 글자 그대로 같은 모양**을 돌려준다. 덕분에 이사가 3단계로 끝났다:
 
 ```js
+// 1단계 — 출처를 한 줄로 갈랐다 (OAuth 우선, 로그인 전엔 Worker 폴백)
 const source = () => (yt.isSignedIn() ? yt : worker);
+
+// 2단계 — 로그인 상태로 두 경로를 실제로 검증
+// 3단계 — 폴백을 지우고 yt.* 직접 호출로 (source() 삭제, Worker 쪽 코드 146줄 제거)
 ```
 
 - 데이터를 **어디서 가져오는지**가 통째로 바뀌었는데(내 서버의 API 키 → 사용자 본인 토큰)
-  화면 코드는 한 줄만 늘었다. 계약을 밖에 두지 않았다면 렌더 코드까지 갈라졌을 것이다.
-- 같은 이유로 **되돌리기도 싸다.** OAuth 쪽에 문제가 생기면 이 한 줄로 Worker 경로로 되돌아간다.
+  화면의 렌더·병합·랜덤 뽑기 코드는 **한 줄도 안 바뀌었다.**
+- **1단계를 거친 게 핵심이다.** 곧바로 갈아치웠다면 검증 전에 돌아갈 길이 사라졌을 것이다.
+  같은 모양이라 "두 출처를 동시에 살려두는 기간"을 공짜로 만들 수 있었다.
 - 교훈: 계약의 값어치는 "한쪽을 갈아치울 때" 청구된다. 평소엔 그냥 번거로운 규칙처럼 보인다.
 
 > **계약을 넓힐 땐 기존 필드를 그대로 두고 추가만 한다** (2026-07-30에 `id`·`published`를 이렇게 추가).
