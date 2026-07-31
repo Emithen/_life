@@ -1,6 +1,6 @@
 # 데이터 흐름과 계약(contract)
 
-> 기준: youtube-feed `3dfc9a8` · 2026-07-31
+> 기준: youtube-feed `bcd9205` · 2026-07-31
 
 ## 1. 두 경로가 근본적으로 다른 이유
 
@@ -117,8 +117,24 @@ GET /videos?ids=<ID,ID,...>               ← 최대 50개(= API 1회 호출 = 1
 - **"못 가져온 것"도 계약에 넣었다** — `/videos`의 `missing`(요청했는데 안 돌아온 ID),
   `/playlist`의 `skipped`(비공개·삭제라 건너뛴 개수). 조용히 사라지면 사용자가
   "왜 516개 넣었는데 500개지?"를 알 수 없다. **빠진 이유를 셈해서 돌려주는 것도 계약의 일부.**
-- 50개 넘는 ID는 **화면이 나눠서** 부른다(`CHUNK`). Worker는 51개 이상이면 400으로 거절한다
-  — 한도를 서버가 명시하고, 쪼개는 책임은 호출자가 진다.
+- 50개 넘는 ID는 **호출자가 나눠서** 부른다(`src/worker.js`의 `fetchVideosChunked`).
+  Worker는 51개 이상이면 400으로 거절한다 — 한도를 서버가 명시하고, 쪼개는 책임은 호출자가 진다.
+
+### 계약의 화면 쪽 끝은 `src/worker.js` 하나다 (2026-07-31 모듈 분리)
+
+계약은 양쪽에 끝이 있다. Worker 쪽은 `worker/rss-proxy.js`, **화면 쪽은 `src/worker.js`**.
+예전엔 화면 쪽 끝이 세 군데로 흩어져 있었고(그중 둘은 버튼 핸들러 안), 응답 해석 4줄이 복사돼 있었다.
+
+```js
+// src/worker.js — 이 셋이 계약의 전부. 화면은 URL을 모른다.
+export const fetchChannel  = (ch)  => get("/rss", { ch, limit: LIMIT });
+export const fetchPlaylist = (id)  => get("/playlist", { id });
+export const fetchVideos   = (ids) => get("/videos", { ids: ids.join(",") });
+```
+
+- **에러도 계약이다** — `get()`이 `err.notFound` 같은 **판정**만 붙여 넘기고,
+  한국어 문장은 화면이 만든다. 같은 실패라도 채널 추가와 재생목록 동기화는 할 말이 다르기 때문.
+- `CHUNK = 50`처럼 **Worker가 정한 한도**도 여기 산다. 화면의 사정이 아니라 계약의 일부다.
 
 > **계약을 넓힐 땐 기존 필드를 그대로 두고 추가만 한다** (2026-07-30에 `id`·`published`를 이렇게 추가).
 > 그래야 구버전 화면이 새 응답을 받아도 안 깨진다.

@@ -1,6 +1,6 @@
 # CORS·릴레이·캐싱
 
-> 기준: youtube-feed `3dfc9a8` · 2026-07-31
+> 기준: youtube-feed `bcd9205` · 2026-07-31
 
 ## 1. CORS — 왜 릴레이가 필요한가
 
@@ -85,7 +85,8 @@ GET https://yt-rss.javer1155.workers.dev/rss?ch=@핸들&limit=3
 |---|---|---|
 | ~~`collect.py`~~ (Actions) | `xml.etree.ElementTree` | 파이썬 표준 XML 파서 (파일은 07-31 삭제, 대비용으로 남긴 항목) |
 | `worker/rss-proxy.js` | **정규식 + indexOf** | **Workers엔 DOMParser가 없다** (브라우저가 아님) |
-| `src/app.js` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 그릴 뿐 (예전엔 `DOMParser`를 썼다) |
+| `src/worker.js` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 받아 넘길 뿐 (예전엔 `app.js`가 `DOMParser`를 썼다) |
+| `src/app.js` (브라우저) | **네트워크를 아예 모름** | `worker.js`가 준 JSON만 그린다 (2026-07-31 분리) |
 
 ## 4. XML 엔티티 디코딩
 

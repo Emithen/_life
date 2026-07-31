@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `3dfc9a8` · 2026-07-31
+> 기준: youtube-feed `bcd9205` · 2026-07-31
 
 ## 한 줄
 
@@ -23,7 +23,7 @@
 ## 배포 구조
 
 ```
-youtube-feed [main 브랜치]  ← 재료: index.html, src/app.js, workflow
+youtube-feed [main 브랜치]  ← 재료: index.html, src/*.js, workflow
         │
         │  트리거: main에 push  (cron은 2026-07-28에 중단)
         ▼
@@ -61,13 +61,30 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | 파일 | 하는 일 |
 |---|---|
 | `index.html` | 손으로 쓴 정적 껍데기 (CSS + 채널 추가 폼) |
-| `src/app.js` | localStorage의 내 채널을 Worker로 가져와 렌더 + 나중에 볼 풀·랜덤 추천 |
+| `src/app.js` | **화면만.** DOM을 만들고 이벤트를 붙인다. `fetch`도 `localStorage`도 직접 안 쓴다 |
+| `src/worker.js` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약·50개씩 쪼개기 |
+| `src/storage.js` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
 | `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). `/rss` 채널 · `/playlist` 재생목록 · `/videos` ID묶음 |
 | `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
 
 **저장소의 모든 파일이 손으로 쓴 원본이다** (2026-07-31 `collect.py`·`data.json` 삭제 후).
 생성물이 main에 섞이지 않으므로 `dist/` 분리 논의는 당분간 필요 없다.
+
+### 세 파일이 나뉜 기준 (2026-07-31 모듈 분리)
+
+**"바깥 세계와 닿는 곳"을 각각 한 파일로 몰았다.** 화면은 그 둘을 통해서만 바깥과 만난다.
+
+```
+app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유튜브
+   │                 (바깥: 네트워크)
+   └────import────▶  storage.js  ──▶  localStorage
+                     (바깥: 저장소)
+```
+
+- 덕분에 **저장 위치를 바꾸는 일이 `storage.js` 안의 일**이 된다 → 로그인(L5)이 이 파일 교체로 환원된다.
+- Worker 계약이 바뀌어도 고칠 곳은 `worker.js` 하나다 (예전엔 버튼 핸들러가 URL을 직접 조립했다).
+- 화면 코드에 `fetch`·`localStorage`가 다시 등장하면 **경계가 무너지는 신호**다.
 
 ⚠️ `publish_dir`이 저장소 루트라 **파일 위치가 곧 사이트 URL**이다.
 `src/app.js`는 사이트에서도 `/src/app.js`로 열린다. 그래서 `.gitignore`에 `src/`를 넣으면
@@ -91,6 +108,9 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
   - 재생목록 입력은 **URL을 통째로 받아 `list=`만 뽑아 쓴다**(`normalizePlaylistId`). 실패 시
     실제로 쓴 ID와 길이를 같이 보여줘 "잘린 ID"를 스스로 알아채게 한다 → `90-gotchas.md` 14번
 - ✅ **폴더 정리** (2026-07-31) — `app.js` → `src/app.js`, 휴면 파일 삭제. 남은 건 전부 현역 파일
+- ✅ **모듈 분리** (2026-07-31) — `worker.js`(네트워크)·`storage.js`(저장)를 떼어냄. `type="module"` 전환
+  - `app.js` 147줄 감소. 반복되던 응답 해석 4줄 ×3, 본 영상 읽고-쓰고-저장 ×3이 함수 하나씩으로
+  - ⚠️ 캐시 버스팅 지점이 3곳으로 늘었다(index.html + import 2곳) → `90-gotchas.md` 2번
 - 🎯 다음: ① 내보내기/가져오기 ② **로그인(국면 B, Supabase)** — L4 → **L5**
 - 🔜 대기: 통합 타임라인(전체 최신순)·주제 필터, 썸네일, 배치 요청
 
@@ -105,6 +125,8 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | `playlistId` | watchme 재생목록 ID |
 
 ⚠️ 브라우저 데이터를 지우면 전부 사라진다. 계정이 없으므로 복구 수단이 없다.
+
+이 표의 키는 전부 `src/storage.js`의 `KEYS`에 모여 있다. **내보내기·로그인 때 이 파일만 보면 된다.**
 
 ## 설계 원칙 (판단이 필요할 때 기준)
 
