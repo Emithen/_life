@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `c3bdd65` · 2026-07-30
+> 기준: youtube-feed `3dfc9a8` · 2026-07-31
 
 ## 1. RSS란
 
@@ -17,7 +17,10 @@ https://www.youtube.com/feeds/videos.xml?channel_id=UC....
 - **API 키가 필요 없다** — 키 발급·쿼터·브라우저 노출 문제가 통째로 사라짐
 - **공식 경로라 안정적** — 페이지 긁기는 디자인이 바뀌면 깨지지만 RSS 구조는 거의 안 변함
 - **가볍다** — 채널 페이지 ~1MB vs RSS ~20KB
-- **데이터센터 IP에서도 잘 열린다** — GitHub Actions에서 도는 `collect.py`에 중요
+- **데이터센터 IP에서도 잘 열린다** — GitHub Actions에서 돌던 옛 `collect.py`에 중요했던 점
+
+> 단, **채널 목록에만** 해당한다. 2026-07-31의 랜덤 추천에선 재생목록 RSS가 최근 15개만 주는 한계 때문에
+> 결국 **YouTube Data API를 함께 쓴다**(키는 Worker에만 둔다) → `30-cors-and-relay.md`
 
 ## 2. RSS 구조 → 우리 JSON
 
@@ -81,7 +84,7 @@ channel_id 확정 → RSS 주소 조립 → 수집 → 파싱
 - 실측 **~20초 → ~1초**
 - 결과를 1시간 캐시 (`@핸들 → ID`는 절대 안 바뀌므로 안전)
 
-## 4. 배포용 collect.py가 핸들 긁기를 아예 뺀 이유
+## 4. 배포용 collect.py가 핸들 긁기를 아예 뺀 이유 (2026-07-31 삭제된 코드의 기록)
 
 배포하면 수집 주체가 집 IP가 아니라 **GitHub 데이터센터 IP**다. 페이지 긁기는 차단당하기 쉽다.
 `channel_id`는 채널마다 절대 안 바뀌므로 → **한 번 뽑아 상수로 박고 RSS만 읽는다.**

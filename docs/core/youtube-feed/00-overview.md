@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `ad9c195` · 2026-07-31
+> 기준: youtube-feed `3dfc9a8` · 2026-07-31
 
 ## 한 줄
 
@@ -23,7 +23,7 @@
 ## 배포 구조
 
 ```
-youtube-feed [main 브랜치]  ← 재료: index.html, app.js, workflow
+youtube-feed [main 브랜치]  ← 재료: index.html, src/app.js, workflow
         │
         │  트리거: main에 push  (cron은 2026-07-28에 중단)
         ▼
@@ -34,7 +34,7 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
         ▼
    GitHub Pages 가 웹에 게시 → 폰 브라우저
         │
-        └─ 페이지가 열리면 app.js가 내 Worker를 불러 영상 목록을 실시간으로 받아옴
+        └─ 페이지가 열리면 src/app.js가 내 Worker를 불러 영상 목록을 실시간으로 받아옴
 ```
 
 - 서버가 상시 떠 있지 않다 → **무료·관리 0**.
@@ -45,13 +45,14 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | | 내 채널 (현재 유일) | ~~추천 채널 (프리셋 9개)~~ **중단됨** |
 |---|---|---|
 | 언제 수집 | **볼 때** (브라우저에서 즉시) | ~~미리 (Actions, 3시간마다)~~ |
-| 만든 주체 | `app.js` + 내 Worker | ~~`collect.py` (서버)~~ |
+| 만든 주체 | `src/app.js` + 내 Worker | ~~`collect.py` (서버)~~ |
 | 저장 위치 | `localStorage` (그 브라우저에만) | ~~`data.json`~~ |
 | 아키텍처 유형 | L3+L4 (요청시 동적 + 클라 개인화) | ~~L2 (주기 갱신 정적)~~ |
 
-추천 채널은 "지금 필요 없다"고 판단해 **화면에서 빼고 수집도 멈췄다**.
-`collect.py`·`data.json`은 **삭제하지 않고 저장소에 보관** 중이고,
-`collect.yml`의 주석만 풀면 되살아난다. → 두 경로를 비교한 설명은 `10-flow-and-contracts.md`
+추천 채널은 "지금 필요 없다"고 판단해 **화면에서 빼고 수집도 멈췄고**(07-28),
+**파일까지 지웠다**(07-31, 작업 폴더 정리). 되살릴 일이 생기면 git 이력에서 꺼낸다:
+`git log --diff-filter=D --oneline -- collect.py` → `git show <그 커밋>^:collect.py > collect.py`
+→ 두 경로를 비교한 설명은 `10-flow-and-contracts.md`
 
 자세히: `10-flow-and-contracts.md` · 유형 정의: `../../service-architecture-types.md`
 
@@ -60,21 +61,26 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 | 파일 | 하는 일 |
 |---|---|
 | `index.html` | 손으로 쓴 정적 껍데기 (CSS + 채널 추가 폼) |
-| `app.js` | localStorage의 내 채널을 Worker로 가져와 렌더 + 나중에 볼 풀·랜덤 추천 |
+| `src/app.js` | localStorage의 내 채널을 Worker로 가져와 렌더 + 나중에 볼 풀·랜덤 추천 |
 | `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). `/rss` 채널 · `/playlist` 재생목록 · `/videos` ID묶음 |
 | `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
-| ~~`collect.py`~~ | 휴면. 채널 9개 RSS 수집 → `data.json` 생성 (지금 실행 안 됨) |
-| ~~`data.json`~~ | 휴면. 마지막 수집 결과가 남아 있음 (화면이 읽지 않음) |
+
+**저장소의 모든 파일이 손으로 쓴 원본이다** (2026-07-31 `collect.py`·`data.json` 삭제 후).
+생성물이 main에 섞이지 않으므로 `dist/` 분리 논의는 당분간 필요 없다.
+
+⚠️ `publish_dir`이 저장소 루트라 **파일 위치가 곧 사이트 URL**이다.
+`src/app.js`는 사이트에서도 `/src/app.js`로 열린다. 그래서 `.gitignore`에 `src/`를 넣으면
+배포에서 통째로 빠져 404가 난다 → `90-gotchas.md` 1번
 
 ## 지금 상태 (2026-07-31)
 
-- ✅ 계약 v1 완료 — `collect.py`는 데이터만, 화면은 `app.js`가 렌더 (데이터/뷰 분리)
+- ✅ 계약 v1 완료 (07-28) — 수집기는 데이터만, 화면은 `app.js`가 렌더 (데이터/뷰 분리)
 - ✅ 개인화 국면 A — localStorage로 내 채널 직접 추가 (링크·@핸들·채널ID)
 - ✅ **릴레이 내재화 완료** — 공개 프록시 전부 제거, 내 Cloudflare Worker로 전환
   - 주소: `https://yt-rss.javer1155.workers.dev` (코드: `worker/rss-proxy.js`)
   - @핸들 추가 **~20초 → ~1초**, "3연속 실패" 해소
-- ✅ **추천 채널 제거** (2026-07-28) — 화면·수집 중단, 코드는 보관
+- ✅ **추천 채널 제거** (2026-07-28) — 화면·수집 중단. 파일은 2026-07-31에 삭제(git 이력에 남음)
 - ✅ **링크 공유 카드** (2026-07-30) — OG 태그 + `og-image.png`(원본 `og-image.svg`), 파비콘
 - ✅ **본 영상 표시** (2026-07-30) — 클릭 시 자동 기록 + `✓`/`○` 수동 토글, 흐리게. 채널당 6개
 - ✅ **NEW 배지** (2026-07-30) — 24시간 이내 업로드. 본 영상이면 배지를 감춤(본 것 우선)
@@ -84,6 +90,7 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
   - 실제로 516개를 가져와 동작 확인
   - 재생목록 입력은 **URL을 통째로 받아 `list=`만 뽑아 쓴다**(`normalizePlaylistId`). 실패 시
     실제로 쓴 ID와 길이를 같이 보여줘 "잘린 ID"를 스스로 알아채게 한다 → `90-gotchas.md` 14번
+- ✅ **폴더 정리** (2026-07-31) — `app.js` → `src/app.js`, 휴면 파일 삭제. 남은 건 전부 현역 파일
 - 🎯 다음: ① 내보내기/가져오기 ② **로그인(국면 B, Supabase)** — L4 → **L5**
 - 🔜 대기: 통합 타임라인(전체 최신순)·주제 필터, 썸네일, 배치 요청
 
@@ -102,6 +109,8 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 ## 설계 원칙 (판단이 필요할 때 기준)
 
 1. **필요한 것만 그때그때. 아프기 전엔 도입 안 한다.** (프레임워크·백엔드 다 이 기준으로 보류 중)
-2. **계약을 밖에 둔다.** 파이썬↔화면은 `data.json` 모양으로만 대화 → 한쪽을 바꿔도 다른 쪽 무사.
+2. **계약을 밖에 둔다.** 데이터 쪽↔화면은 정해진 JSON 모양으로만 대화 → 한쪽을 바꿔도 다른 쪽 무사.
+   (예전엔 파이썬↔화면이 `data.json`으로, 지금은 Worker↔화면이 같은 모양으로 대화한다.
+   **수집기를 통째로 갈아치웠는데 화면이 안 깨진 게 이 원칙의 증거다.**)
 3. **남의 서비스는 반드시 가끔 실패한다.** 채널 하나 실패해도 나머지는 나오게 짠다.
 4. **무료·무관리를 최대한 오래 유지한다.**

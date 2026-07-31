@@ -1,6 +1,6 @@
 # CORS·릴레이·캐싱
 
-> 기준: youtube-feed `ad9c195` · 2026-07-31
+> 기준: youtube-feed `3dfc9a8` · 2026-07-31
 
 ## 1. CORS — 왜 릴레이가 필요한가
 
@@ -14,7 +14,8 @@
 **릴레이(프록시)가 뚫는 원리**: 프록시는 브라우저가 아니라 그냥 서버라서 이 규칙에 안 걸린다.
 유튜브에서 받아온 뒤, 브라우저에게 넘길 때 "읽어도 된다" 허락 헤더를 붙여준다.
 
-> 참고: `collect.py`(GitHub Actions)는 이 문제가 아예 없다. 서버끼리 통신이라 CORS는 브라우저만의 규칙.
+> 참고: 옛 `collect.py`(GitHub Actions)엔 이 문제가 아예 없었다. 서버끼리 통신이라 CORS는 브라우저만의 규칙.
+> **"브라우저로 옮기니 CORS가 생겼다"** — 릴레이가 필요해진 건 이 이동의 대가다.
 
 ## 2. 릴레이의 진화
 
@@ -82,9 +83,9 @@ GET https://yt-rss.javer1155.workers.dev/rss?ch=@핸들&limit=3
 
 | 위치 | 방식 | 왜 |
 |---|---|---|
-| `collect.py` (Actions) | `xml.etree.ElementTree` | 파이썬 표준 XML 파서 |
+| ~~`collect.py`~~ (Actions) | `xml.etree.ElementTree` | 파이썬 표준 XML 파서 (파일은 07-31 삭제, 대비용으로 남긴 항목) |
 | `worker/rss-proxy.js` | **정규식 + indexOf** | **Workers엔 DOMParser가 없다** (브라우저가 아님) |
-| `app.js` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 그릴 뿐 (예전엔 `DOMParser`를 썼다) |
+| `src/app.js` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 그릴 뿐 (예전엔 `DOMParser`를 썼다) |
 
 ## 4. XML 엔티티 디코딩
 
@@ -109,8 +110,9 @@ XML에선 `<`, `&`를 그대로 못 써서 `&lt;`, `&amp;`로 저장한다.
 
 ## 6. 실패를 다루는 태도
 
-- `collect.py`: 채널마다 `try/except` → 9개 중 1개 실패해도 나머지 8개는 나온다.
-- `app.js`: 채널별로 따로 fetch → 하나 실패해도 그 칸만 "불러오기 실패"로 표시.
+- `src/app.js`: 채널별로 따로 fetch → 하나 실패해도 그 칸만 "불러오기 실패"로 표시.
+- (옛 `collect.py`도 채널마다 `try/except`로 9개 중 1개 실패해도 나머지 8개는 나오게 짰었다 —
+  경로가 바뀌어도 **부분 실패 격리라는 태도는 그대로 이어진다**.)
 - **원칙**: 남의 서비스는 반드시 가끔 실패한다고 가정하고, 부분 실패를 격리한다.
 
 ## 7. XSS 방지
