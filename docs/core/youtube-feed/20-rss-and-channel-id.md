@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `54736f0` · 2026-07-31
+> 기준: youtube-feed `4af2eb7` · 2026-08-02 (그 사이 변경은 백업 기능뿐 — 이 문서 범위와 무관)
 
 ## 1. RSS란
 
@@ -20,7 +20,9 @@ https://www.youtube.com/feeds/videos.xml?channel_id=UC....
 - **데이터센터 IP에서도 잘 열린다** — GitHub Actions에서 돌던 옛 `collect.py`에 중요했던 점
 
 > 단, **채널 목록에만** 해당한다. 2026-07-31의 랜덤 추천에선 재생목록 RSS가 최근 15개만 주는 한계 때문에
-> 결국 **YouTube Data API를 함께 쓴다**(키는 Worker에만 둔다) → `30-cors-and-relay.md`
+> 결국 **YouTube Data API를 함께 쓴다** → `30-cors-and-relay.md`
+> (같은 날 OAuth로 일원화되면서 **API 키 자체가 없어졌다** — 브라우저가 내 토큰으로 직접 부른다.
+>  Worker에 키를 두던 구조는 `YT_API_KEY` 삭제로 끝났다.)
 
 ## 2. RSS 구조 → 우리 JSON
 
