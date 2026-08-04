@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "youtube-feed",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "8765", "--directory", "youtube-feed"],
       "port": 8765
     }
