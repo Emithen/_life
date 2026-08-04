@@ -1,6 +1,6 @@
 # 데이터 흐름과 계약(contract)
 
-> 기준: youtube-feed `4af2eb7` · 2026-08-02
+> 기준: youtube-feed `ef18e3a` · 2026-08-04
 
 ## 1. 두 경로가 근본적으로 다른 이유
 
@@ -200,6 +200,7 @@ const source = () => (yt.isSignedIn() ? yt : worker);
 
 - 화면에서 필터·정렬·검색이 필요해지면 → 갈래1 확장 (계약 위에서 자유롭게)
 - `if`로 화면 조립이 스파게티가 되면 → 그때서야 React
-- 여러 기기 동기화가 필요해지면 → 인증+DB (L5, Supabase)
-  → 벤더 비교·`storage.js`가 동기라는 문제·캐시-우선 대응은 `00-overview.md`의
-  "국면 B로 가기 전에 정리된 것"에 모아뒀다. `ROADMAP.md`의 국면 B도 같은 내용으로 정정돼 있다(`4af2eb7`).
+- ✅ **켜졌다 (2026-08-04)** — 여러 기기 동기화 → **Google Drive `appDataFolder`** (L5).
+  Supabase에서 뒤집은 이유·벤더 비교 5안·Drive의 함정·`storage.js`가 동기라는 문제는
+  `00-overview.md`의 "국면 B로 가기 전에 정리된 것"에 모아뒀다.
+  `ROADMAP.md`의 국면 B도 같은 내용으로 맞춰져 있다(`ef18e3a`).
