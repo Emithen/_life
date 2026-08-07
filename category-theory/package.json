@@ -1,0 +1,16 @@
+{
+  "name": "category-theory",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "범주론 학습 트랙 — 법칙을 눈으로 믿지 않고 실행해서 확인한다",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/*.ts",
+    "check": "npm run typecheck && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "typescript": "^5.9.3"
+  }
+}

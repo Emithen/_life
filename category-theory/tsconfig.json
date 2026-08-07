@@ -1,0 +1,27 @@
+{
+  // 빌드 단계를 만들지 않는다. Node가 .ts를 타입 스트리핑으로 직접 실행하고,
+  // tsc는 **타입 검사만** 한다(noEmit). 그래서 산출물 폴더가 없다.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["esnext"],
+    "types": ["node"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+
+    // Node의 타입 스트리핑은 "지우기만" 한다 → enum·네임스페이스·파라미터 프로퍼티처럼
+    // 코드를 생성하는 문법을 쓰면 런타임에 깨진다. 이 옵션이 그걸 컴파일 타임에 막아준다.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    // import 경로에 .ts 확장자를 그대로 쓴다 (Node가 요구하는 방식)
+    "allowImportingTsExtensions": true,
+
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"]
+}

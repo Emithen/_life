@@ -32,14 +32,31 @@ description: 이 저장소의 프로젝트별 코어 로직·구조·설계 판�
 | 화면 구조, 라우팅, UI/디자인 시스템, 구독≠피드 | `40-screens-and-ui.md` (설계 문서 — 아직 구현 전) |
 | 예전에 터졌던 문제, 함정, 왜 이렇게 짰나 | `90-gotchas.md` |
 
+`category-theory`는 개요 문서가 **지도 역할만** 하고 진짜 내용은 저장소 안에 있다:
+
+| 질문이 이런 쪽이면 | 읽을 파일 (category-theory) |
+|---|---|
+| 진도, 다음에 뭘 배우나, 단계 구성 | `category-theory/ROADMAP.md` |
+| 특정 개념(함자·모나드·요네다 …)을 뭐라고 정리했나 | `category-theory/notes/<번호>-<개념>.md` **1개만** |
+| 법칙을 코드로 어떻게 확인했나 | `category-theory/src/<번호>-*.ts` |
+
+`claude-code-mastery`도 같은 꼴이다 — 개요는 `docs/core/`, 진도는 `claude-code-mastery/ROADMAP.md`.
+
 "전반적으로 설명해줘" 같은 광범위 요청이면 **개요만 읽고 답한 뒤**, 더 깊이 볼 주제를 제안한다.
 
 ### 4. 문서가 낡았는지 확인한다 (명령 1회, 거의 공짜)
 
 각 문서 헤더에 `기준: <저장소> <커밋>` 이 적혀 있다. 현재와 비교한다:
 
+헤더의 `<저장소>`가 어느 git 저장소인지 보고 그쪽을 조회한다.
+`youtube-feed`는 **중첩된 별도 저장소**이고, 나머지(`_life`)는 이 저장소 자신이다.
+
 ```bash
+# 헤더가 "기준: youtube-feed <커밋>" 인 경우
 git -C /Users/soggyfries/Desktop/_life/youtube-feed log --oneline <기준커밋>..HEAD | head -20
+
+# 헤더가 "기준: _life <커밋>" 인 경우 (claude-code-mastery, category-theory)
+git -C /Users/soggyfries/Desktop/_life log --oneline <기준커밋>..HEAD | head -20
 ```
 
 - 차이가 없으면 아무 말도 하지 않는다.

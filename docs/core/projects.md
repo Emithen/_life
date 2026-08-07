@@ -6,6 +6,7 @@
 |---|---|---|---|
 | `youtube-feed` | 유튜브 정보 수집기 | 관심 채널 최신 영상을 모아 폰에서 보는 정적 사이트 (+개인화) | `youtube-feed/` |
 | `claude-code-mastery` | Claude Code 숙련 트랙 | agent coding을 바닥부터 쌓는 학습 트랙 (youtube-feed와 병행) | `claude-code-mastery/` |
+| `category-theory` | 범주론 학습 트랙 | 프로그래머 각도로 요네다까지 완주하는 개념 트랙 (TypeScript로 법칙 확인) | `category-theory/` |
 
 ## 문서 작성 규칙
 

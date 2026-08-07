@@ -12,6 +12,7 @@
 *.yaml  text eol=lf
 *.txt   text eol=lf
 *.json  text eol=lf
+*.ts    text eol=lf
 
 # 바이너리: 줄바꿈/인코딩 변환을 절대 하지 않는다
 *.pyc   binary

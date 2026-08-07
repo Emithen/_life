@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 
+# npm 의존성 (설치하면 되살아나므로 커밋하지 않는다 — package.json이 진실)
+node_modules/
+
 # OS가 만드는 잡파일
 .DS_Store
 Thumbs.db
