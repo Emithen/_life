@@ -29,6 +29,7 @@ description: 이 저장소의 프로젝트별 코어 로직·구조·설계 판�
 | 데이터 흐름, 배치 vs 실시간, 계약(JSON 모양) | `10-flow-and-contracts.md` |
 | RSS가 뭔지, channel_id 찾는 과정, @핸들 | `20-rss-and-channel-id.md` |
 | CORS, 프록시, Cloudflare Worker, 캐싱 | `30-cors-and-relay.md` |
+| 화면 구조, 라우팅, UI/디자인 시스템, 구독≠피드 | `40-screens-and-ui.md` (설계 문서 — 아직 구현 전) |
 | 예전에 터졌던 문제, 함정, 왜 이렇게 짰나 | `90-gotchas.md` |
 
 "전반적으로 설명해줘" 같은 광범위 요청이면 **개요만 읽고 답한 뒤**, 더 깊이 볼 주제를 제안한다.
