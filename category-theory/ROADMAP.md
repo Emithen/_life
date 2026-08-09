@@ -171,10 +171,10 @@
 - 코드는 `src/`. 타입 검사와 법칙 검사를 둘 다 돌린다:
 
 ```bash
-cd /Users/soggyfries/Desktop/_life/category-theory && npm run check
+cd /Users/soggyfries/Desktop/_life/category-theory && pnpm check
 ```
 
-> `src/`가 비어 있는 동안 `npm run check`는 실패한다 (`tsc`가 `TS18003: No inputs were found`).
+> `src/`가 비어 있는 동안 `pnpm check`는 실패한다 (`tsc`가 `TS18003: No inputs were found`).
 > 첫 파일을 쓰는 순간 통과하기 시작한다 — **그때까지의 실패는 정상이다.**
 
 ### ⚖️ 폴더의 지위 — 계획은 생성돼도 되고, 기록은 안 된다

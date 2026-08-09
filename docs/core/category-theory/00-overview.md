@@ -94,7 +94,7 @@
 ## 검증
 
 ```bash
-cd /Users/soggyfries/Desktop/_life/category-theory && npm run check
+cd /Users/soggyfries/Desktop/_life/category-theory && pnpm check
 ```
 
 `typecheck`(타입 수준 주장) + `test`(표본 입력에서의 법칙) 둘 다 돈다.

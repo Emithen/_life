@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "description": "범주론 학습 트랙 — 법칙을 눈으로 믿지 않고 실행해서 확인한다",
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test src/*.ts",
-    "check": "npm run typecheck && npm test"
+    "check": "pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
