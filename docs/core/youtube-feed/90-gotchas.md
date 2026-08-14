@@ -260,3 +260,25 @@ curl -s -o /dev/null -w "%{http_code}" "https://www.youtube.com/feeds/videos.xml
 
 `actions/checkout@v4`, `actions/setup-python@v5`가 Node 20 대상이라 경고가 뜬다.
 지금은 강제로 Node 24에서 돌아 문제없음. 언젠가 액션 버전을 올리면 사라진다.
+
+## 21. `silent` 로그인이 조용하지 않다 — 새로고침마다 팝업 (2026-08-15)
+
+**증상**: 새로고침할 때마다 구글 로그인이 재시도되고, 콘솔에 이게 계속 쌓인다.
+
+```
+[GSI_LOGGER]: Failed to open popup window on url: https://accounts.google.com/... Maybe blocked by the browser?
+```
+
+**원인**: 페이지가 열릴 때마다 `yt.signIn({ silent: true })`를 무조건 한 번 시도하고 있었다.
+GIS의 `prompt: ""`(= silent)는 **동의 화면만** 건너뛴다 — **팝업 창은 그대로 연다.**
+
+⭐ **틀린 건 코드가 아니라 그 코드를 낳은 전제였다.** 원래 설계는
+"토큰을 메모리에만 두고 **열 때 조용히 재발급받는 편이 안전하다**"였는데,
+조용한 재발급이 공짜라는 그 가정이 사실이 아니었다.
+→ 자동 시도를 없애고 토큰을 `localStorage`에 살린다. 필요한 동작을 누를 때만 로그인.
+
+⚠️ **이 경고를 몇 주 동안 무해한 잡음으로 넘겼다.** 로그인은 어차피 되니까.
+   콘솔에 매번 나는 에러는 "무해해 보여도" 그 자체가 증상이다.
+
+⚠️ 토큰 키(`authToken`)는 **`storage.js`의 KEYS에 넣지 않는다.**
+   넣으면 `exportAll()`에 실려 **드라이브로 올라간다.** 한 줄 실수로 날 사고라 자리를 분리했다.
