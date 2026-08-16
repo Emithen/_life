@@ -1,6 +1,6 @@
 # CORS·릴레이·캐싱
 
-> 기준: youtube-feed `edd8edc` · 2026-08-16
+> 기준: youtube-feed `02bc62f` · 2026-08-17
 
 ## 1. CORS — 왜 릴레이가 필요한가
 
@@ -45,6 +45,9 @@ GET https://yt-rss.javer1155.workers.dev/rss?ch=@핸들&limit=3
 - @핸들 해결을 서버가 하니 **~20초 → ~1초** (실측 0.5~2초)
 - XML 파싱·채널명 추출까지 Worker가 담당 → 프론트는 계약(JSON) 하나만 다루면 됨
 - `ALLOWED_ORIGINS`로 내 사이트에서만 쓰게 제한 (남이 내 Worker를 공짜 프록시로 못 쓰게)
+  - ⚠️ **배포 주소를 옮기면 여기를 고치고 Worker를 재배포해야 한다.** 안 하면 CORS로
+    채널이 **하나도** 안 뜬다. 옛 주소는 데이터 이사가 끝날 때까지 남겨둔다(2026-08-17)
+  - ⚠️ Vercel **프리뷰 주소는 배포마다 바뀌어** 등록이 불가능하다 → 프리뷰에선 안 되는 게 정상
 - 무료 한도 하루 10만 요청 — 이 규모엔 한참 남음
 - **트레이드오프**: 폴백을 없앴으므로 Worker가 죽으면 내 채널 기능도 멈춘다.
   대신 원인이 한 곳뿐이라 진단이 쉽고, 무료 공용 프록시보다 훨씬 안정적이다.
@@ -60,7 +63,7 @@ GET https://yt-rss.javer1155.workers.dev/rss?ch=@핸들&limit=3
 → **`usage`에 `/rss` 하나만 나오면 지금 코드**다. `/playlist`·`/videos`가 보이면 옛 버전이 올라간 것.
 
 `/playlist`·`/videos`(YouTube Data API)는 걷어냈다. 구글 로그인이 붙으면서 브라우저가 유튜브를
-직접 부르기 때문이다(`src/youtube.js`). **이 Worker는 더 이상 API 키를 쓰지 않는다** —
+직접 부르기 때문이다(`src/lib/youtube.ts`). **이 Worker는 더 이상 API 키를 쓰지 않는다** —
 Cloudflare의 `YT_API_KEY` 시크릿도 지웠다.
 
 ### 왜 한때 Data API를 Worker에 뒀었나 (기록)
@@ -84,7 +87,7 @@ Cloudflare의 `YT_API_KEY` 시크릿도 지웠다.
 | 자격 | 공용 API 키(내 것, 숨겨야 함) | 사용자 본인 토큰(숨길 이유 없음) |
 
 그래서 로그인 뒤의 호출은 **브라우저가 유튜브를 직접** 부른다. 오히려 그게 안전하다 —
-사용자 토큰을 내 서버로 보내지 않기 때문이다. `src/youtube.js`는 `worker.js`의 **형제이지 대체가 아니다**
+사용자 토큰을 내 서버로 보내지 않기 때문이다. `src/lib/youtube.ts`는 `worker.ts`의 **형제이지 대체가 아니다**
 (RSS 채널 목록은 계속 Worker를 탄다).
 
 - 토큰은 1시간짜리이고 refresh token이 없다. 정적 사이트라 클라이언트 시크릿을 못 쓰기 때문.
@@ -92,7 +95,7 @@ Cloudflare의 `YT_API_KEY` 시크릿도 지웠다.
 - 토큰을 `localStorage`에 넣지 않는다. 메모리에만 두고 매번 다시 받는 편이 안전하다.
 - 클라이언트 **ID는 비밀이 아니다**(승인된 JavaScript 원본으로 도메인이 제한된다). 시크릿은 아예 안 쓴다.
 
-### 한도를 코드로 못 박아둔 곳 (지금은 `src/youtube.js`에 있다)
+### 한도를 코드로 못 박아둔 곳 (지금은 `src/lib/youtube.ts`에 있다)
 
 - `MAX_PAGES = 20` — 50개 × 20페이지 = **최대 1000개**. 재생목록이 아무리 길어도 여기서 멈춘다.
 - `CHUNK = 50` — `videos.list`가 한 번에 받는 최대.
@@ -124,9 +127,9 @@ Cloudflare의 `YT_API_KEY` 시크릿도 지웠다.
 |---|---|---|
 | ~~`collect.py`~~ (Actions) | `xml.etree.ElementTree` | 파이썬 표준 XML 파서 (파일은 07-31 삭제, 대비용으로 남긴 항목) |
 | `worker/rss-proxy.js` | **정규식 + indexOf** | **Workers엔 DOMParser가 없다** (브라우저가 아님) |
-| `src/worker.js` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 받아 넘길 뿐 (예전엔 `app.js`가 `DOMParser`를 썼다) |
-| `src/youtube.js` (브라우저) | **파싱 안 함** | Data API가 JSON으로 준다. 우리 계약 모양으로 옮겨 담기만 한다 |
-| `src/app.js` (브라우저) | **네트워크를 아예 모름** | `worker.js`가 준 JSON만 그린다 (2026-07-31 분리) |
+| `src/lib/worker.ts` (브라우저) | **파싱 안 함** | Worker가 JSON으로 주므로 받아 넘길 뿐 (예전엔 `app.js`가 `DOMParser`를 썼다) |
+| `src/lib/youtube.ts` (브라우저) | **파싱 안 함** | Data API가 JSON으로 준다. 우리 계약 모양으로 옮겨 담기만 한다 |
+| `src/screens/*.tsx` (브라우저) | **네트워크를 아예 모름** | `lib/worker.ts`가 준 JSON만 그린다 (2026-07-31 분리, 08-17 React 이식에도 그대로) |
 
 ## 4. XML 엔티티 디코딩
 
@@ -154,7 +157,7 @@ XML에선 `<`, `&`를 그대로 못 써서 `&lt;`, `&amp;`로 저장한다.
 
 ## 6. 실패를 다루는 태도
 
-- `src/app.js`: 채널별로 따로 fetch → 하나 실패해도 그 칸만 "불러오기 실패"로 표시.
+- `src/screens/Feed.tsx`: 채널별로 따로 fetch → 하나 실패해도 그 칸만 "불러오기 실패"로 표시.
 - (옛 `collect.py`도 채널마다 `try/except`로 9개 중 1개 실패해도 나머지 8개는 나오게 짰었다 —
   경로가 바뀌어도 **부분 실패 격리라는 태도는 그대로 이어진다**.)
 - **원칙**: 남의 서비스는 반드시 가끔 실패한다고 가정하고, 부분 실패를 격리한다.

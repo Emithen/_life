@@ -1,6 +1,6 @@
 # 데이터 흐름과 계약(contract)
 
-> 기준: youtube-feed `edd8edc` · 2026-08-16
+> 기준: youtube-feed `02bc62f` · 2026-08-17
 
 ## 1. 두 경로가 근본적으로 다른 이유
 
@@ -142,7 +142,7 @@ fetchVideos(ids)    ← 최대 50개(= API 1회 호출 = 1 unit), videos.list
     videos: [ { id, title, link, date, published, channel } ] }
 ```
 
-⚠️ 이 둘은 **2026-07-31에 Worker(`/playlist`·`/videos`)에서 `src/youtube.js`로 옮겨갔다.**
+⚠️ 이 둘은 **2026-07-31에 Worker(`/playlist`·`/videos`)에서 `src/lib/youtube.ts`로 옮겨갔다.**
 모양은 그대로다 — 그래서 화면 코드가 안 바뀌었다. 자세히는 아래 "같은 계약, 다른 출처".
 
 - `videos[]`의 모양은 `/rss`와 **같다**. 다만 풀에는 **여러 채널이 섞이므로** `channel`(채널명)이 하나 더 붙는다.
@@ -150,18 +150,25 @@ fetchVideos(ids)    ← 최대 50개(= API 1회 호출 = 1 unit), videos.list
 - **"못 가져온 것"도 계약에 넣었다** — `/videos`의 `missing`(요청했는데 안 돌아온 ID),
   `/playlist`의 `skipped`(비공개·삭제라 건너뛴 개수). 조용히 사라지면 사용자가
   "왜 516개 넣었는데 500개지?"를 알 수 없다. **빠진 이유를 셈해서 돌려주는 것도 계약의 일부.**
-- 50개 넘는 ID는 **호출자가 나눠서** 부른다(`src/youtube.js`의 `fetchVideosChunked`).
+- 50개 넘는 ID는 **호출자가 나눠서** 부른다(`fetchVideosChunked`. ⚠️ 이 함수는 2026-08-07에 기능과 함께 삭제됐다 — git 이력에 있다).
   50개는 Data API가 정한 한도다 — 한도는 서버가 정하고, 쪼개는 책임은 호출자가 진다.
 
-### 계약의 화면 쪽 끝은 `src/worker.js` 하나다 (2026-07-31 모듈 분리)
+### 계약의 화면 쪽 끝은 `src/lib/worker.ts` 하나다 (2026-07-31 모듈 분리)
 
-계약은 양쪽에 끝이 있다. Worker 쪽은 `worker/rss-proxy.js`, **화면 쪽은 `src/worker.js`**.
+계약은 양쪽에 끝이 있다. Worker 쪽은 `worker/rss-proxy.js`, **화면 쪽은 `src/lib/worker.ts`**.
 예전엔 화면 쪽 끝이 세 군데로 흩어져 있었고(그중 둘은 버튼 핸들러 안), 응답 해석 4줄이 복사돼 있었다.
 
-```js
-// src/worker.js — 2026-07-31 일원화 이후 이것 하나만 남았다. 화면은 URL을 모른다.
-export const fetchChannel = (ch) => get("/rss", { ch, limit: LIMIT });
+```ts
+// src/lib/worker.ts — 2026-07-31 일원화 이후 이것 하나만 남았다. 화면은 URL을 모른다.
+export const fetchChannel = (ch: string) => get<ChannelFeed>("/rss", { ch, limit: String(LIMIT) });
 ```
+
+> ⭐ **이 분리의 값이 2026-08-17 React 이식에서 청구됐다.** DOM을 아는 파일이
+> `app.js` 하나뿐이라 `lib/` 넷(storage·youtube·drive·worker, 약 590줄)은
+> **로직을 한 줄도 안 바꾸고** 타입만 붙여 건너왔다. 버린 건 화면 조립 780줄뿐이다.
+> 계약의 값어치는 "한쪽을 갈아치울 때" 청구된다 — 07-31 OAuth 이사에 이은 **두 번째 청구**다.
+> ⚠️ 이때도 규칙은 같았다: **프레임워크와 동작을 같이 바꾸지 않는다.** 둘을 함께 바꾸면
+> 뭐가 깨졌는지 알 수 없다(08-05 컬러 토큰의 "보이는 변화 0을 측정해 확인"과 같은 규칙).
 
 - **에러도 계약이다** — `get()`이 `err.notFound` 같은 **판정**만 붙여 넘기고,
   한국어 문장은 화면이 만든다. 같은 실패라도 채널 추가와 재생목록 동기화는 할 말이 다르기 때문.
@@ -169,14 +176,17 @@ export const fetchChannel = (ch) => get("/rss", { ch, limit: LIMIT });
     `err.notFound`가 원래 `res.status === 404 || /찾을 수 없|not ?found/i.test(msg)` 였는데,
     Worker는 **항상 502**를 줬고 메시지는 `"못 찾았어"`라 정규식과 글자가 달랐다 —
     즉 **한 번도 참이 된 적이 없었다.** → 90-gotchas 22
+  - 2026-08-17부터 이 계약은 **타입으로도 적혀 있다**(`src/lib/types.ts`).
+    새 규칙이 아니라 **이 문서에 이미 글로 있던 것**을 컴파일러도 읽게 한 것이다.
+    ⭐ `state?`가 optional인 게 핵심 — **"없음 = 정상"이 계약**이라서.
   - `state`는 에러가 아니라 **정상 응답에 실려 오는 판정**이다. `throw`로 오지 않으므로
     `catch`로는 절대 안 잡힌다. 화면은 `data.state`를 **따로 봐야 한다.**
-- **서버가 정한 한도는 화면이 아니라 창구가 안다.** `CHUNK = 50`은 지금 `src/youtube.js`에 있다
+- **서버가 정한 한도는 화면이 아니라 창구가 안다.** `CHUNK = 50`은 지금 `src/lib/youtube.ts`에 있다
   (Data API의 한도라서). 화면의 사정이 아니라 계약의 일부다.
 
 ### 같은 계약, 다른 출처 — 계약이 값을 한 순간 ⭐ (2026-07-31)
 
-구글 로그인을 붙이면서 `src/youtube.js`가 생겼다. 이 모듈의 `fetchPlaylist`·`fetchVideos`는
+구글 로그인을 붙이면서 `src/youtube.js`(현 `src/lib/youtube.ts`)가 생겼다. 이 모듈의 `fetchPlaylist`·`fetchVideos`는
 **`worker.js`가 주던 것과 글자 그대로 같은 모양**을 돌려준다. 덕분에 이사가 3단계로 끝났다:
 
 ```js

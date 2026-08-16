@@ -1,14 +1,20 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `68ec3bc` · 2026-08-07
+> 기준: youtube-feed `02bc62f` · 2026-08-17
 
 ## 한 줄
 
-관심 유튜브 채널의 최신 영상을 모아 **폰에서 열어보는 정적 사이트**.
+관심 유튜브 채널의 최신 영상을 모아 **폰에서 열어보는 사이트**.
 "내가 만들어서 내가 쓴다"가 목표라 서버·계정 없이 무료로 굴러가게 설계했다.
 
-- 라이브: https://emithen.github.io/youtube-feed/
+- 라이브: https://youtube-feed-mu.vercel.app/
 - 코드: `Emithen/youtube-feed` (public)
+- 스택: **React + Vite + TypeScript + Tailwind** (2026-08-17 이식, 그전엔 바닐라 JS)
+
+> ⚠️ **옛 주소 `emithen.github.io/youtube-feed/` 도 아직 살아 있다.** gh-pages 브랜치는
+> publish 워크플로를 지운 뒤로 아무도 안 밀어서 마지막 상태 그대로 서빙된다.
+> **localStorage가 origin별로 격리**돼 있어 데이터 이사(옛 주소 `☁️ 올리기` →
+> 새 주소 `내려받기`)가 끝날 때까지 필요하다. 끝나면 gh-pages를 지운다.
 
 ## 저장소가 2개다 (중요 — 자주 헷갈리는 지점)
 
@@ -23,30 +29,47 @@
 ## 배포 구조
 
 ```
-youtube-feed [main 브랜치]  ← 재료: index.html, src/*.js, workflow
+youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.ts
         │
-        │  트리거: main에 push  (cron은 2026-07-28에 중단)
+        │  트리거: main에 push
         ▼
-   GitHub Actions (임시 리눅스) — 지금은 배포만 함
+   Vercel 이 저장소를 받아 스스로 빌드 (pnpm build → dist/)
         ▼
-youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직접 건드릴 일 없음)
+   Vercel CDN 이 웹에 게시 → 폰 브라우저
         │
-        ▼
-   GitHub Pages 가 웹에 게시 → 폰 브라우저
-        │
-        └─ 페이지가 열리면 src/app.js가 내 Worker를 불러 영상 목록을 실시간으로 받아옴
+        └─ 페이지가 열리면 React 앱이 내 Worker를 불러 영상 목록을 실시간으로 받아옴
            (로그인했다면 풀 채우기는 유튜브 Data API를 브라우저가 직접 부른다)
 ```
 
-- 서버가 상시 떠 있지 않다 → **무료·관리 0**.
+- 서버가 상시 떠 있지 않다 → **무료·관리 0**. (Vercel도 정적 배포라 그대로다)
 - 영상 목록은 **페이지를 열 때마다 실시간**으로 가져온다 (Worker 경유).
+- ⭐ **빌드 산출물(`dist/`)은 커밋하지 않는다.** Vercel이 소스만 받아 직접 빌드한다.
+  옛 구조(gh-pages)는 `publish_dir: .`로 **저장소를 통째로** 올렸고, 그래서
+  `.gitignore`가 곧 배포 목록이었다(90-gotchas 1). 그 결합이 사라졌다.
+
+### ⚠️ 배포 주소를 옮길 때 손대야 하는 곳 (2026-08-17에 실제로 겪음)
+
+코드 밖에 **주소가 박혀 있는 곳이 셋**이고, 셋 다 안 고치면 조용히 반쯤 죽는다:
+
+| 곳 | 안 고치면 | 누가 |
+|---|---|---|
+| `worker/rss-proxy.js`의 `ALLOWED_ORIGINS` + **Cloudflare 재배포** | CORS 차단 → 채널이 하나도 안 뜸 | 코드 수정 후 대시보드에 붙여넣기 |
+| Google Cloud Console → **승인된 JavaScript 원본** | `origin_mismatch` → 로그인 불가 → 드라이브 동기화도 불가 | 콘솔에서 직접 (끝에 슬래시 금지) |
+| `index.html`의 `og:url`·`og:image` | 공유 카드가 옛 주소를 가리킴 | 코드 |
+
+⭐ **`origin_mismatch`와 `access_denied`는 서로 다른 진단이다**(07-31에 적어둔 판별 규칙):
+`access_denied`가 뜨면 원본은 맞고 테스트 사용자 문제, `origin_mismatch`면 원본 등록 문제다.
+2026-08-17 이사 때 이 규칙이 실제로 어느 쪽인지 바로 짚어줬다.
+
+⚠️ **Vercel 프리뷰 주소는 배포마다 바뀐다**(`youtube-feed-git-xxxx.vercel.app`).
+전부 등록할 수 없으므로 **프리뷰에선 채널도 로그인도 안 되는 게 정상**이다. 고정 주소에서만 쓴다.
 
 ## 데이터 경로 — 지금은 하나뿐 (2026-07-28 변경)
 
 | | 내 채널 (현재 유일) | ~~추천 채널 (프리셋 9개)~~ **중단됨** |
 |---|---|---|
 | 언제 수집 | **볼 때** (브라우저에서 즉시) | ~~미리 (Actions, 3시간마다)~~ |
-| 만든 주체 | `src/app.js` + 내 Worker | ~~`collect.py` (서버)~~ |
+| 만든 주체 | React 앱 + 내 Worker | ~~`collect.py` (서버)~~ |
 | 저장 위치 | `localStorage` (그 브라우저에만) | ~~`data.json`~~ |
 | 아키텍처 유형 | L3+L4 (요청시 동적 + 클라 개인화) | ~~L2 (주기 갱신 정적)~~ |
 
@@ -59,24 +82,35 @@ youtube-feed [gh-pages 브랜치]  ← 결과물만 쌓이는 출판 전용 (직
 
 ## 파일별 역할
 
+⭐ **경계는 이식 전후로 안 바뀌었다.** 바뀐 건 "화면을 어떻게 그리나"뿐이고,
+`lib/` 넷은 07-31 모듈 분리 때 모양 그대로 타입만 붙여 건너왔다 —
+**바깥과 닿는 곳(네트워크·저장)이 화면을 몰라서** 가능했던 일이다.
+
 | 파일 | 하는 일 |
 |---|---|
-| `index.html` | 손으로 쓴 정적 껍데기 (마크업 + 폼). **CSS는 08-07에 빠져나갔다** |
-| `src/style.css` | 스타일 전부. `@layer reset, tokens, base, components, screens` 5구획 |
-| `src/app.js` | **화면만.** DOM을 만들고 이벤트를 붙인다. `fetch`도 `localStorage`도 직접 안 쓴다 |
-| `src/worker.js` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약·50개씩 쪼개기 |
-| `src/storage.js` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
-| `src/youtube.js` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** 구독 목록·재생목록·영상. **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다 |
-| `src/drive.js` | 구글 드라이브 `appDataFolder` 읽고 쓰기 (`findFile`/`load`/`save`). 토큰은 안 쥔다 |
-| `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). **`/rss` 하나뿐** — 07-31에 Data API 갈래 제거 |
-| `manifest.json` · `icons/` | 홈 화면 아이콘 (PWA 최소 조각). 서비스워커는 **일부러 없다** |
-| `.github/workflows/collect.yml` | push 시 gh-pages 게시 (워크플로 이름은 `publish`) |
+| `index.html` | Vite 진입점. `<div id="root">`와 메타 태그만 — **마크업은 전부 React가 만든다** |
+| `src/main.tsx` | 마운트 한 줄 |
+| `src/App.tsx` | 화면 넷을 잇는 곳. **상태를 여기 모아 아래로 내린다** (본 영상이 피드·랜덤 양쪽에 걸려서) |
+| `src/state.ts` | 공유 상태 훅 (`useChannels`·`useWatched`·`usePool`·`useAuth`·`useHashRoute`) |
+| `src/screens/*.tsx` | 화면 넷: `Feed`·`Channels`·`Random`·`Settings` |
+| `src/ui.tsx` | 버튼·입력칸의 클래스 상수 + 작은 조각 (`Status`·`Hint`·`SectionTitle`) |
+| `src/index.css` | Tailwind + **색 토큰 7개를 `@theme`으로.** 토큰이 곧 클래스 이름이 된다 |
+| `src/lib/worker.ts` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약 |
+| `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
+| `src/lib/youtube.ts` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다 |
+| `src/lib/drive.ts` | 구글 드라이브 `appDataFolder` 읽고 쓰기 (`findFile`/`load`/`save`). 토큰은 안 쥔다 |
+| `src/lib/types.ts` | 계약을 타입으로. **새 규칙이 아니라 이 문서들에 이미 글로 있던 것**을 컴파일러도 읽게 한 것 |
+| `src/lib/video.ts` | 영상 한 편을 읽는 규칙 (`videoKey`·`isNew`) |
+| `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). **`/rss` 하나뿐** — 07-31에 Data API 갈래 제거. ⚠️ **빌드에 안 들어간다** (Cloudflare에 따로 붙여넣는 것) |
+| `public/manifest.json` · `public/icons/` | 홈 화면 아이콘 (PWA 최소 조각). 서비스워커는 **일부러 없다** |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
 
 **저장소의 파일은 사실상 전부 손으로 쓴 원본이다** (2026-07-31 `collect.py`·`data.json` 삭제 후).
 예외는 SVG에서 뽑은 PNG 두 종류뿐이고(`og-image.png`, `icons/*.png`), 원본 SVG가 같이 있고
-재생성 명령이 각 SVG 주석에 적혀 있다. 빌드 산출물이 main에 섞이지 않으므로
-`dist/` 분리 논의는 당분간 필요 없다.
+재생성 명령이 각 SVG 주석에 적혀 있다.
+~~빌드 산출물이 main에 섞이지 않으므로 `dist/` 분리 논의는 당분간 필요 없다.~~
+→ **2026-08-17에 빌드 단계가 생겼다.** `dist/`·`node_modules/`는 `.gitignore`로 빼고,
+Vercel이 소스를 받아 직접 빌드한다. 커밋되는 것은 여전히 손으로 쓴 원본뿐이다.
 
 ### 파일이 나뉜 기준 (2026-07-31 모듈 분리, 08-05 `drive.js` 추가)
 
@@ -96,19 +130,29 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 - 덕분에 **저장 위치를 바꾸는 일이 `storage.js` 안의 일**이 된다 → 로그인(L5)이 이 파일 교체로 환원된다.
 - Worker 계약이 바뀌어도 고칠 곳은 `worker.js` 하나다 (예전엔 버튼 핸들러가 URL을 직접 조립했다).
 - `drive.js`는 토큰을 받지 않고 `youtube.js`의 `authedFetch`를 빌려 쓴다.
-  **토큰을 쥔 곳도, 401을 처리하는 곳도 `youtube.js` 하나로 유지된다.**
+  **토큰을 쥔 곳도, 401을 처리하는 곳도 `lib/youtube.ts` 하나로 유지된다.**
 - 화면 코드에 `fetch`·`localStorage`가 다시 등장하면 **경계가 무너지는 신호**다.
 
-⚠️ `publish_dir`이 저장소 루트라 **파일 위치가 곧 사이트 URL**이다.
-`src/app.js`는 사이트에서도 `/src/app.js`로 열린다. 그래서 `.gitignore`에 `src/`를 넣으면
-배포에서 통째로 빠져 404가 난다 → `90-gotchas.md` 1번
+~~⚠️ `publish_dir`이 저장소 루트라 **파일 위치가 곧 사이트 URL**이다.~~
+✅ **해소됨 (2026-08-17).** Vercel은 소스를 받아 **스스로 빌드**하므로 저장소 구조와
+사이트 URL이 더는 같지 않다. `.gitignore`가 배포 목록이던 결합도 끊겼다 → `90-gotchas.md` 1번
+- 지금 URL을 정하는 것은 둘뿐이다: `public/` 안의 파일은 루트로 그대로 나가고,
+  `src/`의 것은 번들러가 `/assets/<이름>-<해시>.js` 로 만든다.
 
-⚠️ **캐시 버스팅 `?v=` 를 손으로 맞출 곳이 여섯이다** (2026-08-07 기준 전부 `16`):
-`<link>` style.css · `<script>` app.js · `app.js`의 import 4개 (+ `drive.js`→`youtube.js` 1곳은
-import와 같은 값이어야 한다 — 어긋나면 `youtube.js`가 두 번 로드돼 **토큰 변수가 둘이 된다**).
-전부 같은 숫자여야 grep 한 줄로 검증된다. **더 늘면 그게 빌드 단계를 들일 신호다** → `90-gotchas.md` 2번
+~~⚠️ **캐시 버스팅 `?v=` 를 손으로 맞출 곳이 여섯이다**~~
+✅ **해소됨 (2026-08-17).** 여섯 곳(`<link>` css · `<script>` app.js · app.js의 import 4 ·
+`drive.js`→`youtube.js` 1)을 손으로 맞추던 것이 **번들러의 파일명 해시로 대체됐다.**
+⭐ **"더 늘면 그게 빌드 단계를 들일 신호다"라고 적어둔 그 신호가 실제로 켜져서 Vite를 들였다** —
+숫자가 4에서 6이 된 것이 근거였다 → `90-gotchas.md` 2번
 
-## 지금 상태 (2026-08-07)
+## 지금 상태 (2026-08-17)
+
+- ✅ **React + Vite + TS + Tailwind 이식** (08-17) — `lib/` 넷은 로직 그대로, 화면만 다시 씀
+- ✅ **배포 Vercel 전환** (08-17) — https://youtube-feed-mu.vercel.app/
+- ⏳ **데이터 이사 진행 중** — origin이 바뀌어 localStorage가 안 따라온다.
+  옛 주소 `☁️ 올리기` → 새 주소 `내려받기`. **순서를 뒤집으면 드라이브가 비워진다**(90-gotchas 23)
+
+### 이전 상태 (2026-08-07 기준)
 
 - ✅ 계약 v1 완료 (07-28) — 수집기는 데이터만, 화면은 `app.js`가 렌더 (데이터/뷰 분리)
 - ✅ 개인화 국면 A — localStorage로 내 채널 직접 추가 (링크·@핸들·채널ID)
@@ -289,7 +333,7 @@ export const loadChannels = () => loadJSON(KEYS.channels, []);  // 배열을 즉
 (2026-08-07에 백업 파일을 지운 뒤로). → ⚙️ 설정의 `☁️ 올리기`. `channelCache`만 빠지고 나머지 4개가 담긴다.
 **올리려면 로그인이 필요하다** — 로그인 없이 쓰는 동안은 이 기기에만 있다.
 
-이 표의 키는 전부 `src/storage.js`의 `KEYS`에 모여 있다. **내보내기·로그인 때 이 파일만 보면 된다.**
+이 표의 키는 전부 `src/lib/storage.ts`의 `KEYS`에 모여 있다. **내보내기·로그인 때 이 파일만 보면 된다.**
 (실제로 내보내기를 만들 때 고칠 곳이 이 파일 하나였다 — 키를 한 곳에 모아둔 값을 여기서 돌려받았다.)
 
 ## 설계 원칙 (판단이 필요할 때 기준)
