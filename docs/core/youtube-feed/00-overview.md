@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `02bc62f` · 2026-08-17
+> 기준: youtube-feed `2b6cfa0` · 2026-08-17
 
 ## 한 줄
 
@@ -149,8 +149,11 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 
 - ✅ **React + Vite + TS + Tailwind 이식** (08-17) — `lib/` 넷은 로직 그대로, 화면만 다시 씀
 - ✅ **배포 Vercel 전환** (08-17) — https://youtube-feed-mu.vercel.app/
-- ⏳ **데이터 이사 진행 중** — origin이 바뀌어 localStorage가 안 따라온다.
-  옛 주소 `☁️ 올리기` → 새 주소 `내려받기`. **순서를 뒤집으면 드라이브가 비워진다**(90-gotchas 23)
+- ✅ **데이터 이사 완료** (08-17) — 드라이브 동기화가 그대로 이사 수단이 됐다(90-gotchas 23)
+  - ⚠️ **옛 사이트를 이제 열면 안 된다.** `emithen.github.io/youtube-feed/`는 아직 살아 있고
+    드라이브에도 접근된다 — 거기서 습관적으로 `☁️ 올리기`를 누르면 **낡은 데이터가
+    드라이브를 덮어쓴다.** 며칠 뒤 정리 예정: `ALLOWED_ORIGINS`·OAuth 원본에서 옛 주소
+    제거 + `gh-pages` 브랜치 삭제
 
 ### 이전 상태 (2026-08-07 기준)
 
