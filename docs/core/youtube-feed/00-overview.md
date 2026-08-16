@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `2b6cfa0` · 2026-08-17
+> 기준: youtube-feed `0ed3e06` · 2026-08-17
 
 ## 한 줄
 
@@ -93,10 +93,11 @@ youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.t
 | `src/App.tsx` | 화면 넷을 잇는 곳. **상태를 여기 모아 아래로 내린다** (본 영상이 피드·랜덤 양쪽에 걸려서) |
 | `src/state.ts` | 공유 상태 훅 (`useChannels`·`useWatched`·`usePool`·`useAuth`·`useHashRoute`) |
 | `src/screens/*.tsx` | 화면 넷: `Feed`·`Channels`·`Random`·`Settings` |
+| `src/components/SubscriptionPicker.tsx` | 구독 목록에서 골라 담는 `<dialog>` 모달. ⭐ **열림 상태를 React로 복제하지 않는다** — DOM이 이미 갖고 있다(90-gotchas 24) |
 | `src/ui.tsx` | 버튼·입력칸의 클래스 상수 + 작은 조각 (`Status`·`Hint`·`SectionTitle`) |
 | `src/index.css` | Tailwind + **색 토큰 7개를 `@theme`으로.** 토큰이 곧 클래스 이름이 된다 |
 | `src/lib/worker.ts` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약 |
-| `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기 |
+| `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기. ⚠️ `channelCache`·`subsCache`는 **캐시라 `exportAll`에서 빠진다** |
 | `src/lib/youtube.ts` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다 |
 | `src/lib/drive.ts` | 구글 드라이브 `appDataFolder` 읽고 쓰기 (`findFile`/`load`/`save`). 토큰은 안 쥔다 |
 | `src/lib/types.ts` | 계약을 타입으로. **새 규칙이 아니라 이 문서들에 이미 글로 있던 것**을 컴파일러도 읽게 한 것 |
@@ -149,6 +150,9 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 
 - ✅ **React + Vite + TS + Tailwind 이식** (08-17) — `lib/` 넷은 로직 그대로, 화면만 다시 씀
 - ✅ **배포 Vercel 전환** (08-17) — https://youtube-feed-mu.vercel.app/
+- ✅ **구독을 저장 대상에서 뺐다** (08-17) — 구독 목록은 「📥 구독 목록에서 고르기」 모달로만
+  본다. `myChannels`는 **고른 것만** 담는다. 안 고른 319개 잔재도 정리 완료.
+  → 드라이브 payload가 **2.8KB**로 줄었고, `active`는 "지금은 안 보기" 한 뜻만 갖게 됐다
 - ✅ **데이터 이사 완료** (08-17) — 드라이브 동기화가 그대로 이사 수단이 됐다(90-gotchas 23)
   - ⚠️ **옛 사이트를 이제 열면 안 된다.** `emithen.github.io/youtube-feed/`는 아직 살아 있고
     드라이브에도 접근된다 — 거기서 습관적으로 `☁️ 올리기`를 누르면 **낡은 데이터가
