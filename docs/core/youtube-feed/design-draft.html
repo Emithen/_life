@@ -1,0 +1,1120 @@
+<title>youtube-feed 디자인 초안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ═══════════════ 문서 토큰 ═══════════════
+   문서 껍데기는 거의 무채색이다 — 안에 든 목업이 색을 내야 하기 때문.
+   중성색은 파랑 쪽으로 살짝 기울여 앱과 한 가족으로 읽히게 했다. */
+:root{
+  --ground:#eceff4; --panel:#ffffff; --panel-2:#f5f7fa;
+  --ink:#171a21; --dim:#5f6878; --faint:#8b94a4;
+  --rule:#d8dde6; --rule-soft:#e6eaf1;
+  --mark:#2f6fd0;          /* 제안 */
+  --flag:#96491a;          /* 지금 · 문제 */
+  --ok:#1f7a4d; --no:#b3341f;
+  --shadow:0 1px 2px rgba(20,26,38,.06), 0 8px 24px -12px rgba(20,26,38,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0b0d12; --panel:#14171e; --panel-2:#181c24;
+    --ink:#e4e8ef; --dim:#98a1b1; --faint:#6c7686;
+    --rule:#262c36; --rule-soft:#1e232c;
+    --mark:#7fb3f2; --flag:#dda06b;
+    --ok:#5fc38d; --no:#ef8a72;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0b0d12; --panel:#14171e; --panel-2:#181c24;
+  --ink:#e4e8ef; --dim:#98a1b1; --faint:#6c7686;
+  --rule:#262c36; --rule-soft:#1e232c;
+  --mark:#7fb3f2; --flag:#dda06b;
+  --ok:#5fc38d; --no:#ef8a72;
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  overflow-x:clip;
+  background:var(--ground); color:var(--ink);
+  font-family:"IBM Plex Sans KR",-apple-system,"Segoe UI","Noto Sans KR",sans-serif;
+  font-size:15px; line-height:1.75; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-variant-numeric:tabular-nums;}
+
+/* 폭: 본문은 좁게, 표·목업은 넓게 */
+.wrap{max-width:1180px; margin:0 auto; padding:0 24px}
+.col{max-width:690px}
+h1,h2,h3{text-wrap:balance; margin:0}
+
+/* ── 상단 ── */
+header.top{
+  border-bottom:1px solid var(--rule);
+  background:var(--panel);
+}
+.eyebrow{
+  font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--faint); font-weight:600;
+}
+h1{font-size:clamp(30px,5vw,46px); line-height:1.12; font-weight:700; letter-spacing:-.02em; margin:14px 0 0}
+.thesis{
+  font-size:clamp(17px,2.4vw,21px); line-height:1.5; color:var(--dim);
+  font-weight:300; margin:16px 0 0; max-width:30ch;
+}
+.thesis b{color:var(--ink); font-weight:600}
+.meta{
+  display:flex; flex-wrap:wrap; gap:8px 22px; margin-top:26px;
+  font-size:12px; color:var(--faint);
+}
+.meta span{white-space:nowrap}
+.meta b{color:var(--dim); font-weight:500}
+
+/* ── 섹션 ── */
+section{padding:64px 0 8px}
+.sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px}
+.sec-num{
+  font-size:11px; font-weight:600; letter-spacing:.1em; color:var(--faint);
+  border:1px solid var(--rule); border-radius:4px; padding:2px 7px; flex:none;
+}
+h2{font-size:26px; font-weight:600; letter-spacing:-.015em}
+.lede{color:var(--dim); margin:10px 0 0; font-size:15.5px}
+.lede b{color:var(--ink); font-weight:600}
+p{margin:14px 0}
+hr.rule{border:0; border-top:1px solid var(--rule); margin:56px 0 0}
+
+/* ── 마커: 지금(rust) vs 제안(blue) ── */
+.tag{
+  display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600;
+  letter-spacing:.04em; padding:2px 8px; border-radius:999px; white-space:nowrap;
+}
+.tag.now{color:var(--flag); background:color-mix(in srgb, var(--flag) 12%, transparent)}
+.tag.new{color:var(--mark); background:color-mix(in srgb, var(--mark) 13%, transparent)}
+.tag.hold{color:var(--faint); background:color-mix(in srgb, var(--faint) 14%, transparent)}
+
+/* ── 카드 ── */
+.card{
+  background:var(--panel); border:1px solid var(--rule); border-radius:12px;
+  box-shadow:var(--shadow);
+}
+
+/* ── before/after 히어로 ── */
+.ba{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:34px}
+@media(max-width:760px){.ba{grid-template-columns:1fr}}
+.ba > div{background:var(--panel); border:1px solid var(--rule); border-radius:12px;
+           overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column}
+.ba-note{margin-top:auto}
+.ba-head{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:11px 16px; border-bottom:1px solid var(--rule-soft); background:var(--panel-2);
+}
+.ba-head strong{font-size:13px; font-weight:600}
+.ba-body{padding:18px 16px; flex:1}
+.ba-note{
+  padding:12px 16px 14px; border-top:1px dashed var(--rule);
+  font-size:12.5px; line-height:1.65; color:var(--dim);
+}
+
+/* ── 진단 목록 ── */
+.diag{list-style:none; padding:0; margin:26px 0 0; display:grid; gap:1px;
+      background:var(--rule); border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.diag li{background:var(--panel); padding:14px 18px; display:grid;
+         grid-template-columns:26px 1fr auto; gap:4px 14px; align-items:baseline}
+.diag .n{font-size:12px; font-weight:600; color:var(--flag)}
+.diag .t{font-size:14.5px; font-weight:500}
+.diag .w{grid-column:2/-1; font-size:12.5px; color:var(--dim); line-height:1.6}
+.diag code{font-size:12px; color:var(--dim)}
+@media(max-width:560px){.diag li{grid-template-columns:22px 1fr}.diag li > .tag{grid-column:2}}
+
+/* ── 대비 계기판 ── */
+.ratios{margin-top:26px; display:grid; gap:1px; background:var(--rule);
+        border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.rrow{background:var(--panel); display:grid;
+      grid-template-columns:184px 1fr 74px 50px 44px;
+      gap:16px; align-items:center; padding:11px 18px}
+@media(max-width:720px){
+  .rrow{grid-template-columns:1fr 52px 46px 42px; gap:8px 12px}
+  .rrow .chip{grid-column:1/-1}
+}
+.chip{
+  justify-self:start; max-width:100%;
+  display:inline-flex; align-items:center; gap:8px; border-radius:7px;
+  padding:6px 11px; font-size:13.5px; font-weight:600; border:1px solid transparent;
+}
+.rlabel{font-size:12.5px; color:var(--dim); line-height:1.45}
+.bar{height:5px; border-radius:3px; background:var(--rule-soft); overflow:hidden; min-width:40px}
+.bar i{display:block; height:100%; border-radius:3px}
+.rnum{font-size:13px; font-weight:600; text-align:right}
+.verdict{font-size:11px; font-weight:600; text-align:right; letter-spacing:.03em}
+.pass{color:var(--ok)} .fail{color:var(--no)}
+.verdict.start{text-align:left}
+
+/* ── 토큰 표 ── */
+.tokens{margin-top:26px; border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.tk{display:grid; grid-template-columns:56px 1fr 96px 96px 1fr;
+    gap:14px; align-items:center; padding:9px 18px; background:var(--panel);
+    border-top:1px solid var(--rule-soft); font-size:13px}
+.tk:first-child{border-top:0}
+.tk.h{background:var(--panel-2); font-size:11px; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--faint); font-weight:600; padding:10px 18px}
+.sw{height:26px; border-radius:6px; border:1px solid var(--rule)}
+.sw.split{background:linear-gradient(115deg, var(--a) 0 50%, var(--b) 50% 100%)}
+.tk .nm{font-weight:500}
+.tk .use{color:var(--dim); font-size:12px}
+@media(max-width:760px){
+  .tk{grid-template-columns:44px 1fr auto; gap:10px}
+  .tk .hex,.tk .use{display:none}
+  .tk.h{grid-template-columns:44px 1fr auto}
+}
+
+/* ── 크기 스케일 ── */
+.scale{margin-top:22px; border:1px solid var(--rule); border-radius:12px; overflow:hidden}
+.sc{display:grid; grid-template-columns:150px 78px 1fr; gap:16px; align-items:baseline;
+    padding:12px 18px; background:var(--panel); border-top:1px solid var(--rule-soft)}
+.sc:first-child{border-top:0}
+.sc .k{font-size:12px; color:var(--dim)}
+.sc .v{font-size:12px; color:var(--faint)}
+.sc .spec{color:var(--ink)}
+@media(max-width:600px){.sc{grid-template-columns:1fr; gap:2px}}
+
+/* ── 눈금 (간격·반경) ── */
+.ruler{display:flex; gap:22px; flex-wrap:wrap; margin-top:22px; align-items:flex-end}
+.ruler figure{margin:0; text-align:center}
+.ruler .box{background:color-mix(in srgb, var(--mark) 22%, transparent);
+            border:1px solid color-mix(in srgb, var(--mark) 45%, transparent)}
+.ruler figcaption{font-size:11px; color:var(--faint); margin-top:7px}
+
+/* 긴 URL은 줄바꿈이 안 되므로 제 상자 안에서 가로로 흐르게 한다 — 본문은 안 밀린다 */
+.urlbox{background:var(--panel); border:1px solid var(--rule); border-radius:10px;
+        padding:14px 16px; overflow-x:auto}
+.urlbox code{font-size:13px; white-space:pre}
+.urlbox .cap{font-size:12.5px; color:var(--dim)}
+
+/* ═══════════════ 앱 목업 ═══════════════
+   목업은 문서 테마를 따르지 않는다 — 라이트 앱 목업은 문서가 어두워도 라이트여야 한다.
+   그래서 앱 토큰은 여기서 값으로 못박는다. */
+.app{
+  --a-surface:#ffffff; --a-sunken:#f2f4f7; --a-raised:#ffffff;
+  --a-ink:#16181d; --a-muted:#667085;
+  --a-line:#8886; --a-faint:#8883;
+  --a-accent:#4a90e2; --a-link:#2f6fd0; --a-onlink:#ffffff;
+  --a-danger:#c0392b;
+  background:var(--a-surface); color:var(--a-ink);
+  font-family:-apple-system,"Segoe UI","Noto Sans KR",sans-serif;
+}
+.app.dark{
+  --a-surface:#14171d; --a-sunken:#0e1014; --a-raised:#1b1f27;
+  --a-ink:#e7eaf0; --a-muted:#949cab;
+  --a-accent:#4a90e2; --a-link:#7fb3f2; --a-onlink:#0b0d11;
+  --a-danger:#f08a7e;
+}
+/* 지금 값 — 「before」 목업에만 쓴다 */
+.app.old{--a-ink:#4a90e2; --a-link:#4a90e2; --a-muted:#8a8a8a}
+
+/* 폰 프레임 */
+.strip{
+  display:flex; gap:22px; overflow-x:auto; padding:30px 24px 34px;
+  margin:26px -24px 0; scroll-snap-type:x proximity;
+}
+.strip::-webkit-scrollbar{height:9px}
+.strip::-webkit-scrollbar-thumb{background:var(--rule); border-radius:9px}
+.phone{flex:none; width:322px; scroll-snap-align:center}
+.phone > figcaption{
+  display:flex; align-items:center; gap:8px; margin:0 0 10px 4px;
+  font-size:12px; color:var(--dim); font-weight:500;
+}
+.phone > figcaption em{font-style:normal; color:var(--faint); font-weight:400}
+.screen{
+  border:1px solid var(--rule); border-radius:20px; overflow:hidden;
+  box-shadow:var(--shadow); height:604px; display:flex; flex-direction:column;
+}
+.screen .scroll{overflow:hidden; flex:1; padding:0 14px 14px}
+
+/* 앱 내부 조각 */
+.a-h1{font-size:1.375rem; font-weight:700; line-height:1.3; margin:14px 14px 0}
+.a-tabs{display:flex; gap:2px; margin:12px 14px 0; border-bottom:1px solid var(--a-faint)}
+.a-tab{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:7px 2px 8px; border-bottom:2px solid transparent; margin-bottom:-1px;
+  font-size:.6875rem; font-weight:600; color:var(--a-muted); text-decoration:none;
+}
+.a-tab .ic{font-size:15px; line-height:1}
+.a-tab.on{color:var(--a-link); border-bottom-color:var(--a-accent)}
+.a-chhead{display:flex; align-items:center; gap:8px; margin:18px 0 8px; padding-left:8px;
+          border-left:4px solid var(--a-accent)}
+.a-chname{font-size:1.0625rem; font-weight:700; color:var(--a-ink); line-height:1.3}
+.a-chip{
+  font-size:.625rem; font-weight:600; padding:1px 7px; border-radius:999px;
+  color:var(--a-muted); background:color-mix(in srgb, var(--a-muted) 16%, transparent);
+  white-space:nowrap;
+}
+.a-count{margin-left:auto; font-size:.6875rem; font-weight:700; color:var(--a-onlink);
+         background:var(--a-link); border-radius:999px; padding:1px 7px}
+.a-caret{color:var(--a-muted); font-size:11px}
+
+/* 영상 행 — 새 안 */
+.a-row{display:grid; grid-template-columns:112px 1fr; gap:10px; padding:7px 0; align-items:start}
+.a-thumb{
+  position:relative; width:112px; aspect-ratio:16/9; border-radius:10px; overflow:hidden;
+  background:var(--a-sunken); flex:none;
+}
+.a-thumb .ph{position:absolute; inset:0}
+.a-thumb .new{
+  position:absolute; left:5px; top:5px; z-index:2;
+  font-size:.5625rem; font-weight:700; letter-spacing:.04em; line-height:1;
+  padding:3px 5px; border-radius:5px; background:var(--a-link); color:var(--a-onlink);
+}
+.a-title{
+  font-size:.9375rem; font-weight:600; color:var(--a-ink); line-height:1.38; margin:0;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.a-meta{display:flex; align-items:center; gap:6px; margin-top:5px; font-size:.75rem; color:var(--a-muted)}
+.a-seen{margin-left:auto; font-size:.8125rem; color:var(--a-muted); padding:2px}
+.a-row.seen .a-thumb{opacity:.5}
+.a-row.seen .a-title{color:var(--a-muted); font-weight:500}
+.a-row.seen .a-seen{color:var(--a-link)}
+.a-more{
+  display:block; width:100%; text-align:center; margin:6px 0 2px; padding:6px;
+  font-size:.75rem; color:var(--a-muted); background:none; border:0;
+}
+.a-notice{
+  display:flex; gap:7px; align-items:flex-start; margin:7px 0; padding:8px 10px;
+  border-radius:8px; background:var(--a-sunken); font-size:.75rem; color:var(--a-muted); line-height:1.5;
+}
+.a-notice .ico{flex:none; line-height:1.5}
+
+/* 스켈레톤 */
+.sk{background:var(--a-sunken); border-radius:6px; display:block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.a-row.skel .a-thumb, .a-row.skel .sk{animation:pulse 1.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.a-row.skel .a-thumb,.a-row.skel .sk{animation:none}}
+
+/* 옛 영상 행 — before 목업 */
+.o-row{margin:7px 0; font-size:1.05rem; line-height:1.6}
+.o-row a{color:#4a90e2; font-weight:600; text-decoration:none}
+.o-row small{color:#8a8a8a; font-size:.8em}
+.o-row .b{display:inline-block; margin-right:7px; padding:1px 6px; border-radius:5px;
+          background:#4a90e2; color:#fff; font-size:.68rem; font-weight:700; letter-spacing:.04em}
+.o-row.seen a{opacity:.45; font-weight:500}
+.o-del{margin-left:10px; padding:1px 8px; font-size:.75rem; color:#c0392b;
+       border:1px solid #c0392b55; border-radius:6px; background:none}
+.o-h2{font-size:1.05rem; font-weight:700; margin:20px 0 8px; padding-left:8px; border-left:4px solid #4a90e2}
+
+/* 썸네일 자리 그림 (외부 이미지를 못 쓰므로 CSS로 그린다) */
+.ph{background:
+  radial-gradient(120% 120% at 18% 12%, rgba(255,255,255,.34), transparent 58%),
+  linear-gradient(128deg, var(--c1), var(--c2));}
+.ph::after{
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(200deg, transparent 46%, rgba(0,0,0,.22) 100%);
+}
+
+/* 채널·설정 화면 조각 */
+.a-listrow{display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--a-faint)}
+.a-listrow .tog{font-size:15px; color:var(--a-link); width:18px; text-align:center}
+.a-listrow .tog.off{color:var(--a-muted)}
+.a-listrow .nm{font-size:.875rem; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.a-listrow .st{margin-left:auto; font-size:.6875rem; color:var(--a-muted); white-space:nowrap}
+.a-btn{
+  padding:8px 14px; border-radius:10px; border:0; background:var(--a-accent);
+  color:#fff; font-size:.9375rem; font-weight:600; font-family:inherit;
+}
+.a-btn.ghost{background:transparent; color:var(--a-muted); border:1px solid var(--a-line)}
+.a-btn.sm{padding:6px 12px; font-size:.8125rem; border-radius:8px}
+.a-box{border:1px solid var(--a-faint); border-radius:10px; padding:11px 13px; margin-top:14px}
+.a-inp{width:100%; padding:8px 10px; border:1px solid var(--a-line); border-radius:10px;
+       background:var(--a-sunken); color:var(--a-ink); font-size:.9375rem; font-family:inherit}
+.a-hint{font-size:.75rem; color:var(--a-muted); margin:8px 0 0; line-height:1.55}
+.a-label{font-size:.6875rem; letter-spacing:.06em; color:var(--a-muted); margin:16px 0 6px; font-weight:600}
+
+/* 컴포넌트 진열 */
+.specimen{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(268px,1fr)); gap:18px; margin-top:26px;
+}
+.spec-card{border:1px solid var(--rule); border-radius:12px; overflow:hidden; background:var(--panel)}
+.spec-card h3{
+  display:flex; align-items:center; gap:7px; min-height:40px;
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--faint);
+  font-weight:600; padding:0 14px; border-bottom:1px solid var(--rule-soft); background:var(--panel-2);
+}
+.spec-card{display:flex; flex-direction:column}
+.spec-card .why{margin-top:auto}
+.spec-card .body{flex:1}
+.spec-card .body{padding:14px}
+.spec-card .why{padding:0 14px 13px; font-size:12px; color:var(--dim); line-height:1.6}
+
+/* 순서(단계) */
+.steps{margin-top:28px; display:grid; gap:14px}
+.step{
+  display:grid; grid-template-columns:46px 1fr; gap:18px; background:var(--panel);
+  border:1px solid var(--rule); border-left:3px solid var(--mark); border-radius:10px; padding:16px 18px;
+}
+.step.hold{border-left-color:var(--faint)}
+.step .letter{font-size:20px; font-weight:700; color:var(--mark); line-height:1.2}
+.step.hold .letter{color:var(--faint); font-size:17px}
+.step h3{font-size:16px; font-weight:600; margin:0 0 6px}
+.step ul{margin:8px 0 0; padding-left:18px; color:var(--dim); font-size:13.5px; line-height:1.7}
+.step ul b{color:var(--ink); font-weight:600}
+.step .sub{font-size:12.5px; color:var(--faint); margin:0}
+@media(max-width:560px){.step{grid-template-columns:1fr; gap:6px}}
+
+footer{border-top:1px solid var(--rule); margin-top:64px; padding:26px 0 46px;
+       font-size:12.5px; color:var(--faint); line-height:1.8}
+footer code{color:var(--dim)}
+a{color:var(--mark)}
+:focus-visible{outline:2px solid var(--mark); outline-offset:2px; border-radius:4px}
+</style>
+
+<header class="top">
+  <div class="wrap" style="padding-top:52px; padding-bottom:44px">
+    <div class="col">
+      <div class="eyebrow">youtube-feed · 디자인 초안</div>
+      <h1>색은 썸네일이 낸다</h1>
+      <p class="thesis">앱은 <b>회색으로 물러난다.</b> 지금 강조색이 제목 240줄을 칠하고 있는데,
+        240번 쓰인 색은 강조가 아니라 본문색이다.</p>
+      <div class="meta">
+        <span>기준 <b class="mono">293e70b</b></span>
+        <span><b>2026-08-21</b></span>
+        <span>부모 문서 <b class="mono">40-screens-and-ui.md</b> 7절</span>
+        <span>상태 <b>초안 · 미구현</b></span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ═══ 히어로: before / after 한 줄 ═══ -->
+<section style="padding-top:44px">
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">00</span><h2>영상 한 줄</h2></div>
+    <p class="lede">모든 제안이 이 한 줄에서 갈린다. 왼쪽은 지금 라이브에 떠 있는 모양,
+      오른쪽은 제안이다. <b>실제 크기다.</b></p>
+  </div>
+
+  <div class="ba">
+    <div>
+      <div class="ba-head"><strong>지금</strong><span class="tag now">라이브 · 293e70b</span></div>
+      <div class="ba-body app old" style="background:#fff">
+        <div class="o-h2">[개발] 노마드 코더<button class="o-del">삭제</button></div>
+        <p class="o-row"><span class="b">NEW</span><a href="#">리액트 19가 실제로 바꾼 것 세 가지 — 서버 컴포넌트 편</a><small> 2026-08-21</small> <span style="color:#8a8a8a;opacity:.55">○</span></p>
+        <p class="o-row seen"><a href="#">타입스크립트 제네릭, 이제 그만 헷갈리자</a><small style="opacity:.6"> 2026-08-19</small> <span style="color:#4a90e2">✓</span></p>
+        <p class="o-row"><a href="#">주니어가 놓치는 커밋 습관 7가지</a><small> 2026-08-14</small> <span style="color:#8a8a8a;opacity:.55">○</span></p>
+      </div>
+      <div class="ba-note">
+        제목이 곧 링크색이라 <b>화면의 모든 글줄이 파랗다.</b> 흰 배경에서 대비
+        <span class="mono">3.29:1</span> — AA 미달. 날짜는 원문 그대로, 「본 영상」은 흐림 하나로만
+        구분된다. 그리고 훑는 화면에 <b>삭제</b>가 앉아 있다.
+      </div>
+    </div>
+
+    <div>
+      <div class="ba-head"><strong>제안</strong><span class="tag new">초안</span></div>
+      <div class="ba-body app">
+        <div class="a-chhead">
+          <span class="a-chname">노마드 코더</span>
+          <span class="a-chip">개발</span>
+          <span class="a-count">2</span>
+          <span class="a-caret">▾</span>
+        </div>
+        <div class="a-row">
+          <div class="a-thumb"><span class="new">NEW</span><span class="ph" style="--c1:#3c4f76;--c2:#8ea6c8"></span></div>
+          <div>
+            <p class="a-title">리액트 19가 실제로 바꾼 것 세 가지 — 서버 컴포넌트 편</p>
+            <div class="a-meta">3시간 전<span class="a-seen">○</span></div>
+          </div>
+        </div>
+        <div class="a-row seen">
+          <div class="a-thumb"><span class="ph" style="--c1:#6b5b7e;--c2:#c3a9bd"></span></div>
+          <div>
+            <p class="a-title">타입스크립트 제네릭, 이제 그만 헷갈리자</p>
+            <div class="a-meta">2일 전<span class="a-seen">✓</span></div>
+          </div>
+        </div>
+        <div class="a-row">
+          <div class="a-thumb"><span class="ph" style="--c1:#2f6659;--c2:#93bfa6"></span></div>
+          <div>
+            <p class="a-title">주니어가 놓치는 커밋 습관 7가지</p>
+            <div class="a-meta">8월 14일<span class="a-seen">○</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="ba-note">
+        색이 <b>썸네일로 옮겨가고</b> 제목은 본문색이 된다. 파랑은 NEW·개수·활성 탭에만 남는다.
+        삭제는 채널 화면으로 보냈고(거기 이미 있다), 시간은 상대값, 「본 영상」은
+        <b>이미지만 흐리고 글자는 대비를 지킨다.</b>
+      </div>
+    </div>
+  </div>
+
+  <p class="col" style="font-size:12.5px; color:var(--faint); margin-top:18px">
+    ⚠︎ 목업의 썸네일은 CSS로 그린 자리표시다. 실물은
+    <code class="mono">i.ytimg.com/vi/&lt;videoId&gt;/mqdefault.jpg</code> — 아래 02절.
+  </p>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 01 진단 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">01</span><h2>진단 일곱</h2></div>
+    <p class="lede">번호는 우선순위가 아니라 참조용이다. <b>넷은 값을 고르는 일이고</b>
+      레이아웃을 건드리지 않는다 — 오늘 고칠 수 있다.</p>
+  </div>
+
+  <ul class="diag col" style="max-width:860px">
+    <li><span class="n mono">1</span><span class="t">영상 목록이 글자 링크뿐이다</span><span class="tag now">구조</span>
+      <span class="w">유튜브인데 썸네일이 없다. 제목을 다 읽어야 판별된다 — 훑기가 성립하지 않는다. <code>Feed.tsx · VideoRow</code></span></li>
+    <li><span class="n mono">2</span><span class="t">링크 색이 흰 배경에서 대비 미달</span><span class="tag new">값</span>
+      <span class="w"><code class="mono">#4a90e2</code> → 3.29:1. AA는 4.5:1이 필요하다. <code>ui.tsx · link</code></span></li>
+    <li><span class="n mono">3</span><span class="t">「본 영상 ✓」 터치 영역이 약 20px</span><span class="tag new">값</span>
+      <span class="w">권장 44px의 절반 미만. 폰에서 옆 링크가 먼저 잡힌다. <code>VideoRow</code></span></li>
+    <li><span class="n mono">4</span><span class="t">삭제 버튼이 피드에 있다</span><span class="tag new">값</span>
+      <span class="w">훑는 화면에 되돌릴 수 없는 행동. 지운 결과는 다음 「☁️ 올리기」에 <b>드라이브까지 전파</b>된다.</span></li>
+    <li><span class="n mono">5</span><span class="t">날짜가 원문 그대로</span><span class="tag new">값</span>
+      <span class="w"><code class="mono">2026-08-19</code>를 보고 「며칠 전」을 매번 환산하게 된다.</span></li>
+    <li><span class="n mono">6</span><span class="t">로딩이 「불러오는 중…」 글자다</span><span class="tag now">구조</span>
+      <span class="w">채널 40개면 40줄이 깜빡이고, 결과가 오면 높이가 달라져 화면이 튄다.</span></li>
+    <li><span class="n mono">7</span><span class="t">본 영상 표시가 흐림 하나뿐</span><span class="tag new">값</span>
+      <span class="w"><code class="mono">opacity-45</code>는 다크에서 거의 안 보이고 대비가 깨진다.</span></li>
+  </ul>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 02 대비 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">02</span><h2>대비를 실제로 쟀다</h2></div>
+    <p class="lede">#2가 추정이 아닌 이유. 영상 제목은 <span class="mono">1.05rem</span>(≈16.8px)
+      semibold라 「큰 글자」 예외(18.66px 굵게)에 <b>못 미친다</b> — 3:1이 아니라 4.5:1을 맞춰야 한다.</p>
+  </div>
+
+  <div class="ratios col" style="max-width:860px">
+    <div class="rrow">
+      <span class="chip" style="background:#fff;color:#4a90e2;border-color:#e2e5ea">리액트 19가 바꾼 것</span>
+      <span class="rlabel"><code class="mono">#4a90e2</code> 글자 / 흰 배경 — 지금</span>
+      <span class="bar"><i style="width:47%;background:var(--no)"></i></span>
+      <span class="rnum mono">3.29</span><span class="verdict fail">미달</span>
+    </div>
+    <div class="rrow">
+      <span class="chip" style="background:#4a90e2;color:#fff">NEW</span>
+      <span class="rlabel">흰 글자 / <code class="mono">#4a90e2</code> 바탕 — 지금. <code class="mono">.68rem</code> 굵은 글자다</span>
+      <span class="bar"><i style="width:47%;background:var(--no)"></i></span>
+      <span class="rnum mono">3.29</span><span class="verdict fail">미달</span>
+    </div>
+    <div class="rrow">
+      <span class="chip" style="background:#16181d;color:#4a90e2">리액트 19가 바꾼 것</span>
+      <span class="rlabel"><code class="mono">#4a90e2</code> 글자 / 어두운 배경 — <b>다크는 이미 통과한다</b></span>
+      <span class="bar"><i style="width:77%;background:var(--ok)"></i></span>
+      <span class="rnum mono">5.40</span><span class="verdict pass">통과</span>
+    </div>
+    <div class="rrow">
+      <span class="chip" style="background:#fff;color:#2f6fd0;border-color:#e2e5ea">리액트 19가 바꾼 것</span>
+      <span class="rlabel"><code class="mono">#2f6fd0</code> 글자 / 흰 배경 — <b>제안</b></span>
+      <span class="bar"><i style="width:70%;background:var(--ok)"></i></span>
+      <span class="rnum mono">4.88</span><span class="verdict pass">통과</span>
+    </div>
+    <div class="rrow">
+      <span class="chip" style="background:#16181d;color:#7fb3f2">리액트 19가 바꾼 것</span>
+      <span class="rlabel"><code class="mono">#7fb3f2</code> 글자 / 어두운 배경 — <b>제안</b></span>
+      <span class="bar"><i style="width:100%;background:var(--ok)"></i></span>
+      <span class="rnum mono">8.15</span><span class="verdict pass">통과</span>
+    </div>
+  </div>
+
+  <div class="col" style="margin-top:30px">
+    <p><b>문제는 색이 나쁜 게 아니라 색 하나가 두 가지 일을 겸한다는 것이다.</b>
+      바탕으로 쓸 때(버튼·배지·탭 밑줄)는 <span class="mono">#4a90e2</span>로 충분하다 — 대비 기준이 다르다.
+      글자로 쓸 때만 미달이다. <b>역할이 둘이면 토큰도 둘이다.</b></p>
+    <p style="font-size:13px; color:var(--dim); border-left:2px solid var(--rule); padding-left:14px">
+      ⭐ 이렇게 하면 <b>강조색 값 자체는 안 바뀐다.</b> 40-screens 7절이 경고해둔 CSS 밖 네 군데
+      — favicon data URI · <code class="mono">theme-color</code> · <code class="mono">manifest.json</code> ·
+      <code class="mono">icons/*.svg</code> — 를 한 곳도 안 건드린다.
+    </p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 03 토큰 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">03</span><h2>토큰 — 일곱은 그대로, 일곱을 더한다</h2></div>
+    <p class="lede">「역할 이름」 규칙(<span class="mono">--blue</span>가 아니라
+      <span class="mono">--accent</span>)은 새 토큰에도 그대로. 스와치가 둘로 갈린 것은 라이트/다크 값이다.</p>
+  </div>
+
+  <div class="tokens">
+    <div class="tk h"><span></span><span>토큰</span><span class="hex">라이트</span><span class="hex">다크</span><span class="use">쓰는 곳</span></div>
+    <div class="tk"><span class="sw" style="background:#4a90e2"></span><span class="nm mono">--color-accent</span><span class="hex mono">#4a90e2</span><span class="hex mono">동일</span><span class="use">바탕 · 테두리 · 탭 막대</span></div>
+    <div class="tk"><span class="sw split" style="--a:#2f6fd0;--b:#7fb3f2"></span><span class="nm mono">--color-link <span class="tag new">신규</span></span><span class="hex mono">#2f6fd0</span><span class="hex mono">#7fb3f2</span><span class="use">글자로 쓰는 파랑 · NEW 바탕</span></div>
+    <div class="tk"><span class="sw split" style="--a:#ffffff;--b:#0b0d11"></span><span class="nm mono">--color-on-link <span class="tag new">신규</span></span><span class="hex mono">#fff</span><span class="hex mono">#0b0d11</span><span class="use">link 바탕 위 글자</span></div>
+    <div class="tk"><span class="sw split" style="--a:#ffffff;--b:#14171d"></span><span class="nm mono">--color-surface <span class="tag new">신규</span></span><span class="hex mono">#ffffff</span><span class="hex mono">#14171d</span><span class="use">본 바탕</span></div>
+    <div class="tk"><span class="sw split" style="--a:#f2f4f7;--b:#0e1014"></span><span class="nm mono">--color-surface-sunken <span class="tag new">신규</span></span><span class="hex mono">#f2f4f7</span><span class="hex mono">#0e1014</span><span class="use">스켈레톤 · 입력칸 · 썸네일 자리</span></div>
+    <div class="tk"><span class="sw split" style="--a:#ffffff;--b:#1b1f27"></span><span class="nm mono">--color-surface-raised <span class="tag new">신규</span></span><span class="hex mono">#ffffff</span><span class="hex mono">#1b1f27</span><span class="use">모달 · 바텀시트</span></div>
+    <div class="tk"><span class="sw split" style="--a:#16181d;--b:#e7eaf0"></span><span class="nm mono">--color-ink <span class="tag new">신규</span></span><span class="hex mono">#16181d</span><span class="hex mono">#e7eaf0</span><span class="use">본문 · <b>영상 제목</b></span></div>
+    <div class="tk"><span class="sw split" style="--a:#667085;--b:#949cab"></span><span class="nm mono">--color-ink-muted <span class="tag new">신규</span></span><span class="hex mono">#667085</span><span class="hex mono">#949cab</span><span class="use">메타 · 힌트 (<span class="mono">--color-muted</span> 후계)</span></div>
+    <div class="tk"><span class="sw" style="background:#8886"></span><span class="nm mono">--color-line</span><span class="hex mono">#8886</span><span class="hex mono">동일</span><span class="use">입력칸 · 고스트 테두리</span></div>
+    <div class="tk"><span class="sw" style="background:#8883"></span><span class="nm mono">--color-line-faint</span><span class="hex mono">#8883</span><span class="hex mono">동일</span><span class="use">상자 테두리</span></div>
+    <div class="tk"><span class="sw" style="background:#c0392b"></span><span class="nm mono">--color-danger</span><span class="hex mono">#c0392b</span><span class="hex mono">동일</span><span class="use">삭제</span></div>
+  </div>
+
+  <div class="col" style="margin-top:26px">
+    <p style="font-size:13px; color:var(--dim); border-left:2px solid var(--rule); padding-left:14px">
+      ⭐ <b><span class="mono">light-dark()</span>는 이미 열려 있던 문이다.</b>
+      2026-08-05에 <span class="mono">color-scheme: light dark</span>를 켜뒀는데,
+      <span class="mono">light-dark()</span>는 바로 그 값을 읽어서 갈린다 — 미디어 쿼리를 새로 쓰지 않고
+      <b>값 자리에서 끝난다.</b> 넓게 받으려면 <span class="mono">--color-link</span> 하나만 덮으면 되고,
+      토큰이 하나라 덮을 곳도 하나다.
+    </p>
+    <p style="font-size:13px; color:var(--dim); border-left:2px solid var(--flag); padding-left:14px">
+      ⚠︎ <span class="mono">--color-muted</span>(<span class="mono">#8a8a8a</span>)를 <b>지우지 말고</b>
+      <span class="mono">--color-ink-muted</span>를 옆에 둔 뒤 옮긴다. <span class="mono">text-muted</span>는
+      화면 다섯에 흩어져 있다 — 한 번에 갈아치우면 무엇이 바뀌었는지 못 센다.
+    </p>
+  </div>
+
+  <div class="col" style="margin-top:40px">
+    <h3 style="font-size:17px; font-weight:600">크기 — 일곱 종을 다섯으로</h3>
+    <p class="lede" style="font-size:14px">셋(<span class="mono">.9 / .85 / .8</span>)은 서로 다르려고
+      다른 게 아니라 <b>그때그때 골라서</b> 달랐다.</p>
+  </div>
+  <div class="scale col" style="max-width:860px">
+    <div class="sc"><span class="k mono">--text-title</span><span class="v mono">1.375 / 700</span><span class="spec" style="font-size:1.375rem;font-weight:700;line-height:1.3">최신 영상 모음</span></div>
+    <div class="sc"><span class="k mono">--text-lg</span><span class="v mono">1.0625 / 600</span><span class="spec" style="font-size:1.0625rem;font-weight:600">리액트 19가 실제로 바꾼 것</span></div>
+    <div class="sc"><span class="k mono">--text-base</span><span class="v mono">0.9375 / 400</span><span class="spec" style="font-size:.9375rem">이 브라우저에만 저장돼요</span></div>
+    <div class="sc"><span class="k mono">--text-sm</span><span class="v mono">0.8125 / 400</span><span class="spec" style="font-size:.8125rem;color:var(--dim)">3시간 전 · 37개 중 12개 켜짐</span></div>
+    <div class="sc"><span class="k mono">--text-xs</span><span class="v mono">0.6875 / 700</span><span class="spec" style="font-size:.6875rem;font-weight:700;letter-spacing:.04em">NEW · 정리 · 삭제</span></div>
+  </div>
+
+  <div class="col" style="margin-top:36px">
+    <h3 style="font-size:17px; font-weight:600">간격 — 4px 배수만</h3>
+    <p class="lede" style="font-size:14px">지금의 <span class="mono">7 · 18 · 22 · 26 · 2px</span>가 여기로 접힌다.</p>
+  </div>
+  <div class="ruler">
+    <figure><div class="box" style="width:4px;height:34px"></div><figcaption class="mono">4</figcaption></figure>
+    <figure><div class="box" style="width:8px;height:34px"></div><figcaption class="mono">8</figcaption></figure>
+    <figure><div class="box" style="width:12px;height:34px"></div><figcaption class="mono">12</figcaption></figure>
+    <figure><div class="box" style="width:16px;height:34px"></div><figcaption class="mono">16</figcaption></figure>
+    <figure><div class="box" style="width:24px;height:34px"></div><figcaption class="mono">24</figcaption></figure>
+    <figure><div class="box" style="width:32px;height:34px"></div><figcaption class="mono">32</figcaption></figure>
+    <figure style="margin-left:22px"><div class="box" style="width:44px;height:44px;border-radius:10px"></div><figcaption class="mono">44 터치</figcaption></figure>
+    <figure style="margin-left:22px"><div class="box" style="width:44px;height:34px;border-radius:6px"></div><figcaption class="mono">r 6</figcaption></figure>
+    <figure><div class="box" style="width:44px;height:34px;border-radius:10px"></div><figcaption class="mono">r 10</figcaption></figure>
+    <figure><div class="box" style="width:44px;height:34px;border-radius:14px"></div><figcaption class="mono">r 14</figcaption></figure>
+    <figure><div class="box" style="width:44px;height:34px;border-radius:999px"></div><figcaption class="mono">r full</figcaption></figure>
+  </div>
+  <p class="col" style="font-size:12.5px; color:var(--faint); margin-top:20px">
+    ⚠︎ <code class="mono">p { margin: 7px 0 }</code>은 Tailwind preflight를 되돌리려고 넣은 값이다.
+    브라우저 기본은 <code class="mono">1em</code>(≈16px)인데 7px로 적어둔 거라, 8로 옮기면
+    <b>원래 되돌리려던 값과 더 멀어진다.</b> 여기는 옮기기 전에 「무엇으로 되돌리는 중이었나」를 먼저 정할 것.
+  </p>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 04 컴포넌트 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">04</span><h2>컴포넌트</h2></div>
+    <p class="lede">구조가 실제로 바뀌는 것은 <b>하나뿐</b>이다 — 영상 행. 나머지는 토큰을 갈아끼운다.</p>
+  </div>
+
+  <div class="specimen">
+    <div class="spec-card">
+      <h3>영상 행 · 기본</h3>
+      <div class="body app">
+        <div class="a-row">
+          <div class="a-thumb"><span class="new">NEW</span><span class="ph" style="--c1:#3c4f76;--c2:#8ea6c8"></span></div>
+          <div><p class="a-title">리액트 19가 실제로 바꾼 것 세 가지</p>
+            <div class="a-meta">3시간 전<span class="a-seen">○</span></div></div>
+        </div>
+      </div>
+      <p class="why">썸네일 112×63 · 제목 2줄 말줄임. <b>NEW가 썸네일 좌상단으로 옮겨간다</b> —
+        「줄 맨 앞에서 잡힌다」는 근거는 그대로고, 줄 맨 앞이 썸네일이 됐을 뿐이다.</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>영상 행 · 본 것</h3>
+      <div class="body app">
+        <div class="a-row seen">
+          <div class="a-thumb"><span class="ph" style="--c1:#6b5b7e;--c2:#c3a9bd"></span></div>
+          <div><p class="a-title">타입스크립트 제네릭, 이제 그만 헷갈리자</p>
+            <div class="a-meta">2일 전<span class="a-seen">✓</span></div></div>
+        </div>
+      </div>
+      <p class="why">흐림은 <b>정보가 없는 쪽(이미지)에만</b> 건다. 제목은 <span class="mono">ink-muted</span>로
+        내려가 대비를 지키고, ✓ 기호가 색과 별개로 상태를 말한다.</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>스켈레톤 <span class="tag new" style="text-transform:none;letter-spacing:0">신규</span></h3>
+      <div class="body app">
+        <div class="a-row skel">
+          <div class="a-thumb"></div>
+          <div><span class="sk" style="height:13px;width:100%"></span>
+            <span class="sk" style="height:13px;width:62%;margin-top:6px"></span>
+            <span class="sk" style="height:10px;width:34%;margin-top:9px"></span></div>
+        </div>
+      </div>
+      <p class="why">높이가 <b>진짜 카드와 같아야</b> 결과가 와도 화면이 안 튄다. 그게 스켈레톤의
+        본 일이고, 「불러오는 중…」 글자는 그걸 못 한다.</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>채널 머리</h3>
+      <div class="body app">
+        <div class="a-chhead" style="margin-top:0">
+          <span class="a-chname">노마드 코더</span><span class="a-chip">개발</span>
+          <span class="a-count">2</span><span class="a-caret">▾</span>
+        </div>
+      </div>
+      <p class="why">색막대는 유지. <span class="mono">[주제]</span> 대괄호가 칩이 되고,
+        <b>삭제는 사라진다</b> — 채널 화면에 이미 있다. 오른쪽은 안 본 개수.</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>안내 줄 <span class="tag new" style="text-transform:none;letter-spacing:0">신규</span></h3>
+      <div class="body app">
+        <div class="a-notice"><span class="ico">⚠︎</span><span>채널이 없어졌을 수도 있어 — 확인이 안 됐어</span></div>
+        <div class="a-notice"><span class="ico">↻</span><span>지금은 못 불러왔어 — 아래는 지난번에 받아둔 것</span></div>
+      </div>
+      <p class="why">지금은 링크 없는 영상 행이라 <b>여섯 번째 영상처럼 읽힌다.</b>
+        낡은 목록과 안내가 함께 나오게 된 뒤로 생긴 문제다 — 띠를 깔아 갈라놓는다.</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>버튼 · 입력</h3>
+      <div class="body app">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="a-btn">추가</button>
+          <button class="a-btn ghost">전부 끄기</button>
+          <button class="a-btn sm ghost">↻ 다시 불러오기</button>
+        </div>
+        <input class="a-inp" style="margin-top:10px" value="채널 링크 / @핸들 / UC…" readonly>
+      </div>
+      <p class="why">그대로 둔다. 반경과 크기만 토큰으로 옮긴다
+        (<span class="mono">r 10</span> · <span class="mono">--text-base</span>).</p>
+    </div>
+
+    <div class="spec-card">
+      <h3>탭 — 다섯이 됐다</h3>
+      <div class="body app" style="padding:0 0 14px">
+        <div class="a-tabs">
+          <a class="a-tab on"><span class="ic">📺</span>피드</a>
+          <a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a>
+          <a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+      </div>
+      <p class="why">가로 배치는 다섯에서 빠듯하다(375px 폰에서 탭당 ≈68px). 이모지를 위로 올려
+        2줄로. <b>이모지는 남긴다 — 이 앱의 말투다.</b></p>
+    </div>
+
+    <div class="spec-card">
+      <h3>다크</h3>
+      <div class="body app dark" style="border-radius:0">
+        <div class="a-chhead" style="margin-top:0"><span class="a-chname">노마드 코더</span>
+          <span class="a-chip">개발</span><span class="a-count">2</span></div>
+        <div class="a-row">
+          <div class="a-thumb"><span class="new">NEW</span><span class="ph" style="--c1:#3c4f76;--c2:#8ea6c8"></span></div>
+          <div><p class="a-title">리액트 19가 실제로 바꾼 것 세 가지</p>
+            <div class="a-meta">3시간 전<span class="a-seen">○</span></div></div>
+        </div>
+      </div>
+      <p class="why">다크는 <b>이미 대비를 통과하고 있었다.</b> 바뀌는 건 표면이 시스템색에서
+        토큰으로 옮겨가는 것 — 스켈레톤·모달에 두 번째 표면이 필요해서다.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 05 화면 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">05</span><h2>화면 다섯</h2></div>
+    <p class="lede">폰 폭 기준. <b>옆으로 밀어서</b> 본다. 구조가 바뀌는 것은 ②피드와 ①채널뿐이고,
+      나머지 셋은 토큰만 갈아끼운 모습이다.</p>
+  </div>
+
+  <div class="strip">
+    <!-- ② 피드 -->
+    <figure class="phone">
+      <figcaption>② 피드 <em>· 라이트</em></figcaption>
+      <div class="screen app">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab on"><span class="ic">📺</span>피드</a><a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a><a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+            <span style="font-size:.75rem;color:var(--a-muted);letter-spacing:.04em">— 켠 채널 12개 —</span>
+            <button class="a-btn sm ghost" style="margin-left:auto">↻ 방금</button>
+          </div>
+          <div class="a-chhead"><span class="a-chname">노마드 코더</span><span class="a-chip">개발</span>
+            <span class="a-count">2</span><span class="a-caret">▾</span></div>
+          <div class="a-row">
+            <div class="a-thumb"><span class="new">NEW</span><span class="ph" style="--c1:#3c4f76;--c2:#8ea6c8"></span></div>
+            <div><p class="a-title">리액트 19가 실제로 바꾼 것 세 가지 — 서버 컴포넌트 편</p>
+              <div class="a-meta">3시간 전<span class="a-seen">○</span></div></div>
+          </div>
+          <div class="a-row seen">
+            <div class="a-thumb"><span class="ph" style="--c1:#6b5b7e;--c2:#c3a9bd"></span></div>
+            <div><p class="a-title">타입스크립트 제네릭, 이제 그만 헷갈리자</p>
+              <div class="a-meta">2일 전<span class="a-seen">✓</span></div></div>
+          </div>
+          <div class="a-row">
+            <div class="a-thumb"><span class="ph" style="--c1:#2f6659;--c2:#93bfa6"></span></div>
+            <div><p class="a-title">주니어가 놓치는 커밋 습관 7가지</p>
+              <div class="a-meta">8월 14일<span class="a-seen">○</span></div></div>
+          </div>
+          <button class="a-more">⌄ 3개 더 보기</button>
+          <div class="a-chhead"><span class="a-chname">디에디트</span><span class="a-chip">리뷰</span>
+            <span class="a-caret" style="margin-left:auto">▾</span></div>
+          <div class="a-row skel"><div class="a-thumb"></div>
+            <div><span class="sk" style="height:13px;width:100%"></span>
+              <span class="sk" style="height:13px;width:58%;margin-top:6px"></span>
+              <span class="sk" style="height:10px;width:32%;margin-top:9px"></span></div></div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- ② 피드 다크 -->
+    <figure class="phone">
+      <figcaption>② 피드 <em>· 다크 · 안내 줄</em></figcaption>
+      <div class="screen app dark">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab on"><span class="ic">📺</span>피드</a><a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a><a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <div class="a-chhead"><span class="a-chname">코딩애플</span><span class="a-chip">개발</span>
+            <span class="a-count">1</span><span class="a-caret">▾</span></div>
+          <div class="a-notice"><span class="ico">↻</span><span>지금은 못 불러왔어 — 아래는 지난번에 받아둔 것</span></div>
+          <div class="a-row">
+            <div class="a-thumb"><span class="ph" style="--c1:#7a4b3a;--c2:#d3a487"></span></div>
+            <div><p class="a-title">웹팩 없이 번들러 직접 만들어보기</p>
+              <div class="a-meta">4일 전<span class="a-seen">○</span></div></div>
+          </div>
+          <div class="a-chhead"><span class="a-chname">사라진 채널</span><span class="a-chip">구독</span>
+            <span class="a-caret" style="margin-left:auto">▾</span></div>
+          <div class="a-notice"><span class="ico">⛔</span><span>채널이 없어졌어 — 삭제·정지된 걸 확인했어</span></div>
+          <div class="a-chhead"><span class="a-chname">Kurzgesagt</span><span class="a-chip">과학</span>
+            <span class="a-count">2</span><span class="a-caret">▾</span></div>
+          <div class="a-row">
+            <div class="a-thumb"><span class="new">NEW</span><span class="ph" style="--c1:#2b4a7d;--c2:#7fa8dd"></span></div>
+            <div><p class="a-title">What If We Detonated All Nuclear Bombs at Once?</p>
+              <div class="a-meta">7시간 전<span class="a-seen">○</span></div></div>
+          </div>
+          <div class="a-row">
+            <div class="a-thumb"><span class="ph" style="--c1:#5c3f6e;--c2:#a98cc0"></span></div>
+            <div><p class="a-title">우주에서 가장 외로운 별</p>
+              <div class="a-meta">1일 전<span class="a-seen">○</span></div></div>
+          </div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- ① 채널 -->
+    <figure class="phone">
+      <figcaption>① 채널 <em>· 상태 표식 자리</em></figcaption>
+      <div class="screen app">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab"><span class="ic">📺</span>피드</a><a class="a-tab on"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a><a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <div class="a-box">
+            <div style="font-size:.9375rem;font-weight:600">＋ 내 채널 추가</div>
+            <button class="a-btn" style="margin-top:10px;width:100%">📥 구독 목록에서 고르기</button>
+            <input class="a-inp" style="margin-top:8px" value="채널 링크 / @핸들 / UC…" readonly>
+            <p class="a-hint">이 브라우저에만 저장돼요(localStorage).</p>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:10px;margin-top:20px">
+            <strong style="font-size:.9375rem">내 채널</strong>
+            <span style="font-size:.8125rem;color:var(--a-muted)">37개 중 12개 켜짐</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="a-btn sm ghost">전부 끄기</button>
+            <button class="a-btn sm ghost">전부 켜기</button>
+          </div>
+          <div style="margin-top:8px">
+            <div class="a-listrow"><span class="tog">☑</span><span class="nm">노마드 코더</span><span class="st">개발</span></div>
+            <div class="a-listrow"><span class="tog">☑</span><span class="nm">디에디트</span><span class="st">리뷰</span></div>
+            <div class="a-listrow"><span class="tog off">☐</span><span class="nm" style="color:var(--a-muted)">사라진 채널</span><span class="st" style="color:var(--a-danger)">⛔ 삭제됨</span></div>
+            <div class="a-listrow"><span class="tog">☑</span><span class="nm">코딩애플</span><span class="st">⚠︎ 확인 안 됨</span></div>
+            <div class="a-listrow"><span class="tog off">☐</span><span class="nm" style="color:var(--a-muted)">Kurzgesagt</span><span class="st">과학</span></div>
+          </div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- ③ 랜덤 -->
+    <figure class="phone">
+      <figcaption>③ 랜덤 <em>· 썸네일이 가장 크게 값하는 곳</em></figcaption>
+      <div class="screen app">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab"><span class="ic">📺</span>피드</a><a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab on"><span class="ic">🎲</span>랜덤</a><a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <p class="a-label">풀에서 하나</p>
+          <div style="border-radius:14px;overflow:hidden;position:relative;aspect-ratio:16/9;background:var(--a-sunken)">
+            <span class="ph" style="position:absolute;inset:0;--c1:#334a6b;--c2:#9db6d6"></span>
+          </div>
+          <p style="font-size:1.0625rem;font-weight:600;line-height:1.4;margin:12px 0 0">
+            도시가 밤에 잠들지 않는 이유 — 야간 경제 다큐</p>
+          <div class="a-meta" style="margin-top:7px">디에디트 · 3개월 전</div>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="a-btn" style="flex:1">▶ 열기</button>
+            <button class="a-btn ghost">🎲 다시</button>
+          </div>
+          <div class="a-box">
+            <div style="font-size:.875rem;font-weight:600">재생목록 동기화</div>
+            <p class="a-hint">풀에 <strong>516개</strong>. 마지막 동기화 어제.</p>
+            <button class="a-btn sm ghost" style="margin-top:8px">↻ 지금 동기화</button>
+          </div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- ④ 설정 -->
+    <figure class="phone">
+      <figcaption>④ 설정 <em>· 구조 변경 없음</em></figcaption>
+      <div class="screen app dark">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab"><span class="ic">📺</span>피드</a><a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a><a class="a-tab on"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <p class="a-label">계정</p>
+          <div class="a-listrow" style="border:0">
+            <span class="nm">javer1155@gmail.com</span>
+            <button class="a-btn sm ghost" style="margin-left:auto">로그아웃</button>
+          </div>
+          <div class="a-box">
+            <div style="font-size:.9375rem;font-weight:600">☁️ 드라이브 동기화</div>
+            <p class="a-hint">채널 37개 · 본 영상 1,204개 · 풀 516개 — 2.8KB</p>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="a-btn" style="flex:1">☁️ 올리기</button>
+              <button class="a-btn ghost" style="flex:1">⬇ 내려받기</button>
+            </div>
+            <div class="a-notice" style="margin-top:10px">
+              <span class="ico">⚠︎</span><span>양쪽 다 <strong>덮어쓴다.</strong> 누르면 몇 개가 사라지는지 먼저 보여줍니다.</span>
+            </div>
+          </div>
+          <p class="a-label">이 기기</p>
+          <p class="a-hint" style="margin-top:0">마지막 올리기 · 8월 20일 22:14</p>
+        </div>
+      </div>
+    </figure>
+
+    <!-- ⑤ 의견 -->
+    <figure class="phone">
+      <figcaption>⑤ 의견 <em>· 구조 변경 없음</em></figcaption>
+      <div class="screen app">
+        <div class="a-h1">최신 영상 모음</div>
+        <div class="a-tabs">
+          <a class="a-tab"><span class="ic">📺</span>피드</a><a class="a-tab"><span class="ic">📋</span>채널</a>
+          <a class="a-tab"><span class="ic">🎲</span>랜덤</a><a class="a-tab"><span class="ic">⚙️</span>설정</a>
+          <a class="a-tab on"><span class="ic">💬</span>의견</a>
+        </div>
+        <div class="scroll">
+          <p style="font-size:.9375rem;margin-top:16px">불편한 점이나 있었으면 하는 걸 적어주세요.</p>
+          <textarea class="a-inp" rows="6" style="margin-top:8px;resize:none;line-height:1.6"
+            readonly>채널이 많아지니까 원하는 걸 찾기가 힘들어요. 주제별로 접을 수 있으면 좋겠어요.</textarea>
+          <button class="a-btn" style="width:100%;margin-top:10px">보내기</button>
+          <p class="a-hint">함께 실리는 건 <strong>켠 채널 개수</strong>뿐이에요 — 목록은 안 나갑니다.
+            익명이고 계정 정보는 안 붙어요.</p>
+        </div>
+      </div>
+    </figure>
+  </div>
+
+  <div class="col" style="margin-top:34px">
+    <h3 style="font-size:17px;font-weight:600">「더보기」의 미결에 답 하나</h3>
+    <p>40-screens 5절이 <b>「앞에서 3개 / 안 본 것 3개 — 아직 안 정했다」</b>로 남겨둔 자리다.
+      썸네일이 붙으면 한 줄 높이가 커지므로 이 결정이 더 급해진다.</p>
+    <div class="ratios" style="max-width:100%">
+      <div class="rrow" style="grid-template-columns:1fr 150px 90px">
+        <span class="rlabel" style="font-weight:600;color:var(--ink)">안</span>
+        <span class="rlabel">07-30의 문제 재발</span><span class="rlabel">시간순</span>
+      </div>
+      <div class="rrow" style="grid-template-columns:1fr 150px 90px">
+        <span class="rlabel">앞에서 3개</span>
+        <span class="rlabel"><span class="verdict fail start">재발한다</span></span>
+        <span class="rlabel"><span class="verdict pass start">유지</span></span>
+      </div>
+      <div class="rrow" style="grid-template-columns:1fr 150px 90px">
+        <span class="rlabel">안 본 것만 3개 (정렬 변경)</span>
+        <span class="rlabel"><span class="verdict pass start">안 난다</span></span>
+        <span class="rlabel"><span class="verdict fail start">깨진다</span></span>
+      </div>
+      <div class="rrow" style="grid-template-columns:1fr 150px 90px; background:color-mix(in srgb, var(--mark) 7%, var(--panel))">
+        <span class="rlabel" style="color:var(--ink);font-weight:600">안 본 것 3개까지 · 순서 유지 <span class="tag new">제안</span></span>
+        <span class="rlabel"><span class="verdict pass start">안 난다</span></span>
+        <span class="rlabel"><span class="verdict pass start">유지</span></span>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--dim);margin-top:16px">
+      최대가 6이라 <b>접힌 높이가 유계</b>다. 6개는 이미 받아와 있으므로 「더보기」는 네트워크 0회 —
+      40-screens가 <span class="mono">LIMIT</span>을 건드리지 말라고 못박은 이유가 여기서 값을 한다.
+    </p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 06 썸네일 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">06</span><h2>썸네일 — 요청도 쿼터도 늘지 않는다</h2></div>
+    <p class="lede"><span class="mono">videoId</span>는 <b>이미 갖고 있다</b> —
+      <span class="mono">video.ts</span>의 <span class="mono">videoKey(v)</span>가 그 값이다(본 영상 기록의 열쇠).
+      Worker도, <span class="mono">/rss</span> 계약도, 유튜브 Data API 쿼터도 건드리지 않는다.</p>
+    <p class="urlbox">
+      <code class="mono">https://i.ytimg.com/vi/&lt;videoId&gt;/mqdefault.jpg</code><br>
+      <span class="cap">320×180 · 항상 존재한다</span>
+    </p>
+    <p>그래도 공짜는 아니다. 늘어나는 것과 대비책:</p>
+  </div>
+
+  <div class="ratios col" style="max-width:900px">
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel" style="font-weight:600;color:var(--ink)">늘어나는 것</span><span class="rlabel" style="font-weight:600;color:var(--ink)">대비</span></div>
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel">이미지 요청 = 채널 수 × 6 <b>(40채널이면 240개)</b></span>
+      <span class="rlabel"><code class="mono">loading="lazy"</code> + <code class="mono">decoding="async"</code> — 화면 밖은 안 받는다</span></div>
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel">이미지가 늦게 오면 화면이 튄다</span>
+      <span class="rlabel"><code class="mono">width</code>/<code class="mono">height</code>를 <b>속성으로</b> 박고 자리를 <span class="mono">surface-sunken</span>으로 채운다</span></div>
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel"><b>페이지를 열기만 해도</b> 유튜브 CDN에 요청이 나간다 (지금은 링크를 눌러야 나갔다)</span>
+      <span class="rlabel"><code class="mono">referrerpolicy="no-referrer"</code> — 어느 페이지에서 왔는지는 안 보낸다</span></div>
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel">쇼츠는 세로인데 썸네일은 16:9 레터박스로 온다</span>
+      <span class="rlabel"><code class="mono">object-fit: cover</code> — 위아래 검은 띠가 잘린다</span></div>
+    <div class="rrow" style="grid-template-columns:1fr 1fr">
+      <span class="rlabel"><code class="mono">maxresdefault.jpg</code>는 <b>없을 수 있다</b></span>
+      <span class="rlabel">쓰지 않는다. <span class="mono">mqdefault</span>만 쓴다</span></div>
+  </div>
+
+  <p class="col" style="font-size:13px;color:var(--dim);margin-top:20px;border-left:2px solid var(--flag);padding-left:14px">
+    ⚠︎ <b><span class="mono">channelCache</span>에 썸네일 URL을 저장하지 않는다.</b>
+    <span class="mono">videoId</span>에서 매번 조립한다 — 저장하면 URL 규칙이 바뀔 때 낡은 값이 굳고
+    드라이브 payload도 커진다. 「구독 목록은 저장하지 않는다」와 같은 판단이다.
+  </p>
+</section>
+
+<hr class="rule">
+
+<!-- ═══ 07 순서 ═══ -->
+<section>
+  <div class="col">
+    <div class="sec-head"><span class="sec-num mono">07</span><h2>순서</h2></div>
+    <p class="lede">각 단계는 <b>앞 단계 없이도 성립한다.</b> 중간에 멈춰도 화면이 반쯤 바뀐
+      상태로 남지 않는다.</p>
+  </div>
+
+  <div class="steps col" style="max-width:860px">
+    <div class="step">
+      <span class="letter mono">A</span>
+      <div>
+        <h3>값만 고른다 — 토큰도 레이아웃도 안 건드린다</h3>
+        <p class="sub">다섯 다 되돌리기가 공짜다. 여기서 멈춰도 앱은 더 나아진 채로 끝난다.</p>
+        <ul>
+          <li><b><span class="mono">--color-link</span>·<span class="mono">--color-on-link</span> 추가</b> → 링크·NEW 배지에 적용 <span style="color:var(--faint)">· #2 · 토큰 2줄 + 치환</span></li>
+          <li><b>✓/○ 터치 영역 44px</b> — 투명 여백으로 넓힌다(보이는 크기는 그대로) <span style="color:var(--faint)">· #3</span></li>
+          <li><b>본 영상 표시를 색 + 기호로</b> <span style="color:var(--faint)">· #7</span></li>
+          <li><b>피드에서 삭제 버튼 제거</b> — 채널 화면에 이미 있다 <span style="color:var(--faint)">· #4</span></li>
+          <li><b><span class="mono">relativeTime()</span></b> — <span class="mono">video.ts</span>의 <span class="mono">isNew</span> 옆에 <span style="color:var(--faint)">· #5</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="letter mono">B</span>
+      <div>
+        <h3>썸네일 — 가장 크게 값하는 한 걸음</h3>
+        <p class="sub"><span class="mono">VideoRow</span> 구조 교체 + 스켈레톤. A의 「본 영상 표시」가 여기서 완성된다.</p>
+        <ul>
+          <li>🚦 <b>먼저 폰에서 40채널을 한 번 열어 이미지 240개의 체감을 잰다.</b>
+            느리면 「안 본 것 3개까지」를 <b>B와 함께</b> 넣는다 — 접힌 상태에서 이미지가 절반이 된다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="letter mono">C</span>
+      <div>
+        <h3>토큰 확장 — 표면·글자·크기·간격·반경</h3>
+        <p class="sub">화면 다섯을 한 번에 훑는 작업이라 A·B보다 지루하고 위험하다.</p>
+        <ul>
+          <li>⚠︎ 색 정리(2026-08-05) 때 쓴 방법을 그대로: <b>보이는 변화가 없어야 하는 부분은 측정해서 확인한다.</b></li>
+          <li><span class="mono">--color-muted</span> → <span class="mono">--color-ink-muted</span>는
+            값이 바뀌므로(<span class="mono">#8a8a8a → #667085</span>) 예외 — <b>의도한 변화</b>이니 따로 표시하고 옮긴다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <span class="letter mono">D</span>
+      <div>
+        <h3><span class="mono">#/styleguide</span> 화면</h3>
+        <p class="sub">C가 끝난 <b>다음</b>이다. 정리되지 않은 컴포넌트를 진열해봐야 볼 게 없다.</p>
+        <ul>
+          <li>40-screens는 <span class="mono">styleguide.html</span> 한 장으로 정해뒀지만 그건 바닐라 시절 계획이다.
+            <b>화면 하나로 두면 진짜 컴포넌트를 그대로 쓴다</b> → 어긋날 수가 없고, 별도 CSS 걱정도 사라진다.</li>
+          <li>⚠︎ 탭에는 안 넣는다. 주소로만 연다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step hold">
+      <span class="letter mono">⏸</span>
+      <div>
+        <h3>대기 — 신호등이 켜지면</h3>
+        <ul>
+          <li><b>하단 고정 탭바</b> — 피드 스크롤이 길어져 탭 되돌아가기가 귀찮아질 때
+            <span style="color:var(--faint)">(썸네일이 붙으면 그날이 앞당겨진다)</span></li>
+          <li><b>주제 칩 필터</b> · <b>채널 접기</b> — 켠 채널이 20개를 넘어 「무엇을 볼지」가 한 화면에 안 잡힐 때</li>
+          <li><b>통합 타임라인</b> — 채널별 묶음보다 시간순이 더 보고 싶어질 때</li>
+          <li><b>다크에서 <span class="mono">--color-accent</span> 자체를 밝히기</b> — 지금 대비는 통과하므로 급하지 않다.
+            건드리면 CSS 밖 네 군데가 딸려온다</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="col">
+    <p><b>이 문서가 뒤집은 것</b> — ① 40-screens 7절 「다크 전용 오버라이드가 필요 없다」 →
+      <code class="mono">--color-link</code> 하나만 예외. 예외의 범위를 토큰 하나로 가뒀다.
+      ② NEW 배지 「줄 맨 앞」 → 썸네일 좌상단. 근거는 유지, 줄 맨 앞이 썸네일이 됐을 뿐이다.
+      ③ 산출물 <code class="mono">styleguide.html</code> → <code class="mono">#/styleguide</code> 화면.</p>
+    <p><b>일부러 안 정한 것</b> — <code class="mono">p { margin: 7px 0 }</code>을 8px로 옮길지 ·
+      다크에서 강조색 자체를 밝힐지 · 랜덤 화면 카드 크기(실제로 뽑아보고 정할 것).</p>
+    <p style="margin-top:20px">글 문서 <code class="mono">_life/docs/core/youtube-feed/50-design-draft.md</code>
+      · 기준 <code class="mono">youtube-feed 293e70b</code> · 2026-08-21 · <b>초안이다. 한 줄도 구현 안 됐다.</b></p>
+  </div>
+</footer>
+
+</div>
