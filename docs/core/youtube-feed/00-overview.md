@@ -1,15 +1,19 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `0ed3e06` · 2026-08-17
+> 기준: youtube-feed `293e70b` · 2026-08-21
 
 ## 한 줄
 
 관심 유튜브 채널의 최신 영상을 모아 **폰에서 열어보는 사이트**.
 "내가 만들어서 내가 쓴다"가 목표라 서버·계정 없이 무료로 굴러가게 설계했다.
+→ ⚠️ **2026-08-20에 그 전제의 절반이 깨졌다.** 테스터 4명이 생기면서 서버가 필요해졌고,
+   지금은 **Vercel Functions + Neon Postgres**가 붙어 있다(아직 "의견 남기기" 하나만).
+   무료인 것은 그대로다.
 
 - 라이브: https://youtube-feed-mu.vercel.app/
 - 코드: `Emithen/youtube-feed` (public)
 - 스택: **React + Vite + TypeScript + Tailwind** (2026-08-17 이식, 그전엔 바닐라 JS)
+  + **Vercel Functions(TS) + Neon Postgres** (2026-08-20)
 
 > ⚠️ **옛 주소 `emithen.github.io/youtube-feed/` 도 아직 살아 있다.** gh-pages 브랜치는
 > publish 워크플로를 지운 뒤로 아무도 안 밀어서 마지막 상태 그대로 서빙된다.
@@ -37,11 +41,17 @@ youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.t
         ▼
    Vercel CDN 이 웹에 게시 → 폰 브라우저
         │
-        └─ 페이지가 열리면 React 앱이 내 Worker를 불러 영상 목록을 실시간으로 받아옴
-           (로그인했다면 풀 채우기는 유튜브 Data API를 브라우저가 직접 부른다)
+        ├─ 페이지가 열리면 React 앱이 내 Worker를 불러 영상 목록을 실시간으로 받아옴
+        │  (로그인했다면 풀 채우기는 유튜브 Data API를 브라우저가 직접 부른다)
+        │
+        └─ 「💬 의견」을 보내면 같은 저장소의 api/*.ts 가 **함수로** 떠서 Neon에 넣는다
+           (2026-08-20 추가. 요청이 올 때만 뜨고 끝나면 사라진다)
 ```
 
-- 서버가 상시 떠 있지 않다 → **무료·관리 0**. (Vercel도 정적 배포라 그대로다)
+- 서버가 상시 떠 있지 않다 → **무료·관리 0**. 함수도 마찬가지다(요청 때만 뜬다)
+- ⚠️ **함수는 `sin1`(싱가포르)에 고정해뒀다** — Neon이 거기 있기 때문이다.
+  기본값(미국 동부)이면 질의마다 태평양을 건넌다 → `90-gotchas.md` 28번
+- ⚠️ `vercel.json`의 `framework: "vite"`도 **명시**다. 자동 감지에 기댔다가 로컬만 죽었다(29번)
 - 영상 목록은 **페이지를 열 때마다 실시간**으로 가져온다 (Worker 경유).
 - ⭐ **빌드 산출물(`dist/`)은 커밋하지 않는다.** Vercel이 소스만 받아 직접 빌드한다.
   옛 구조(gh-pages)는 `publish_dir: .`로 **저장소를 통째로** 올렸고, 그래서
@@ -90,18 +100,23 @@ youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.t
 |---|---|
 | `index.html` | Vite 진입점. `<div id="root">`와 메타 태그만 — **마크업은 전부 React가 만든다** |
 | `src/main.tsx` | 마운트 한 줄 |
-| `src/App.tsx` | 화면 넷을 잇는 곳. **상태를 여기 모아 아래로 내린다** (본 영상이 피드·랜덤 양쪽에 걸려서) |
+| `src/App.tsx` | 화면 **다섯**을 잇는 곳. **상태를 여기 모아 아래로 내린다** (본 영상이 피드·랜덤 양쪽에 걸려서). 08-21에 `invalidateLoad`·`refreshFeed`가 여기 붙었다 |
 | `src/state.ts` | 공유 상태 훅 (`useChannels`·`useWatched`·`usePool`·`useAuth`·`useHashRoute`) |
-| `src/screens/*.tsx` | 화면 넷: `Feed`·`Channels`·`Random`·`Settings` |
+| `src/screens/*.tsx` | 화면 다섯: `Feed`·`Channels`·`Random`·`Settings`·**`Feedback`**(08-20) |
 | `src/components/SubscriptionPicker.tsx` | 구독 목록에서 골라 담는 `<dialog>` 모달. ⭐ **열림 상태를 React로 복제하지 않는다** — DOM이 이미 갖고 있다(90-gotchas 24) |
 | `src/ui.tsx` | 버튼·입력칸의 클래스 상수 + 작은 조각 (`Status`·`Hint`·`SectionTitle`) |
 | `src/index.css` | Tailwind + **색 토큰 7개를 `@theme`으로.** 토큰이 곧 클래스 이름이 된다 |
 | `src/lib/worker.ts` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약 |
-| `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기. ⚠️ `channelCache`·`subsCache`는 **캐시라 `exportAll`에서 빠진다** |
+| `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기. ⚠️ `channelCache`·`subsCache`(캐시)와 `myFeedback`·`feedbackDraft`(원본이 서버에 있음)는 **`exportAll`에서 빠진다**. ⚠️ `authToken`은 **일부러 여기 없다** — 넣으면 드라이브로 올라간다 |
 | `src/lib/youtube.ts` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다 |
 | `src/lib/drive.ts` | 구글 드라이브 `appDataFolder` 읽고 쓰기 (`findFile`/`load`/`save`). 토큰은 안 쥔다 |
+| `src/lib/feedback.ts` | **내 서버를 부르는 창구** (08-20). `lib/worker.ts`의 형제 — 에러 규약도 같은 모양 |
 | `src/lib/types.ts` | 계약을 타입으로. **새 규칙이 아니라 이 문서들에 이미 글로 있던 것**을 컴파일러도 읽게 한 것 |
 | `src/lib/video.ts` | 영상 한 편을 읽는 규칙 (`videoKey`·`isNew`) |
+| `api/feedback.ts` | **이 앱의 첫 서버 코드** (08-20). 의견 한 건을 검증해 Neon에 넣는다. ⚠️ **Vercel이 이 폴더를 함수로 자동 인식**한다 — 빌드 산출물이 아니라 별도 런타임 |
+| `db/001_feedback.sql` | 스키마. ⚠️ **마이그레이션 도구는 아직 안 쓴다** — 파일명의 번호가 순서고 Neon 콘솔에서 **손으로** 실행한다 (신호등: 테이블이 서넛이 되거나 되돌릴 일이 생길 때) |
+| `.env.example` | 환경변수의 **모양만** 보여주는 견본(값 없음, 커밋됨). 실제 값은 `.env`(로컬)와 Vercel 대시보드(배포). ⚠️ 대시보드에서 고치면 **재배포해야 적용된다** |
+| `vercel.json` | `framework`·`regions`. **자동으로 정해지는 값을 파일에 못 박는 곳** (90-gotchas 28·29) |
 | `worker/rss-proxy.js` | 내 전용 릴레이 (Cloudflare Worker). **`/rss` 하나뿐** — 07-31에 Data API 갈래 제거. ⚠️ **빌드에 안 들어간다** (Cloudflare에 따로 붙여넣는 것) |
 | `public/manifest.json` · `public/icons/` | 홈 화면 아이콘 (PWA 최소 조각). 서비스워커는 **일부러 없다** |
 | `ROADMAP.md` | 앞으로의 방향 + "언제 다음 단계로 갈지" 신호등 |
@@ -124,6 +139,8 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
    │                 (바깥: 네트워크 — 내 계정) ◀──authedFetch──┐
    ├────import────▶  drive.js  ─────▶  Drive appDataFolder ────┘
    │                 (바깥: 원격 저장소)
+   ├────import────▶  feedback.ts ──▶  /api/feedback ──▶ Neon    (2026-08-20)
+   │                 (바깥: 네트워크 — 내 서버)
    └────import────▶  storage.js  ──▶  localStorage
                      (바깥: 저장소)
 ```
@@ -146,8 +163,20 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 ⭐ **"더 늘면 그게 빌드 단계를 들일 신호다"라고 적어둔 그 신호가 실제로 켜져서 Vite를 들였다** —
 숫자가 4에서 6이 된 것이 근거였다 → `90-gotchas.md` 2번
 
-## 지금 상태 (2026-08-17)
+## 지금 상태 (2026-08-21)
 
+- ✅ **백엔드 배포** (08-20, `d433bf0`) — Vercel Functions + Neon Postgres.
+  첫 손님은 **「💬 의견」 탭** 하나다. 계약·프라이버시 선은 `10-flow-and-contracts.md` 2-b절
+  - ⭐ **내가 만든 서버에 쓰는 것은 이게 처음이다.** Drive 쓰기는 남의 API였고 Worker는
+    무상태 읽기 릴레이였다
+  - ⚠️ 이걸로 **내 데이터 저장소가 둘로 갈렸다** — 의견은 구글 계정 밖(Neon)에 쌓인다
+  - ⚠️ 벤더를 안 늘리던 원칙을 **의식적으로 깼다**(Vercel + Neon). 근거는 멀티유저 +
+    Spring Boot 이전이 계획으로 확정돼 그 부품이 필요해졌다는 것 → `ROADMAP.md`
+- ✅ **RSS 404 판정 수정** (08-21, `293e70b`) — 살아있는 채널 40개가 전부 "없어졌어"로 뜬
+  사고를 고쳤다. 판정에 **"모른다"**가 생겼고, Worker 응답 캐시를 `no-store`로 걷어냈다
+  → `20-rss-and-channel-id.md` 4절 · `90-gotchas.md` 25·26·27번
+  - ⚠️ **Worker는 Cloudflare 대시보드에 손으로 붙여넣어야 라이브 반영된다.**
+    화면(Vercel 자동 배포)과 시점이 어긋나므로 `verified`가 그 틈을 메운다
 - ✅ **React + Vite + TS + Tailwind 이식** (08-17) — `lib/` 넷은 로직 그대로, 화면만 다시 씀
 - ✅ **배포 Vercel 전환** (08-17) — https://youtube-feed-mu.vercel.app/
 - ✅ **구독을 저장 대상에서 뺐다** (08-17) — 구독 목록은 「📥 구독 목록에서 고르기」 모달로만
@@ -158,6 +187,8 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
     드라이브에도 접근된다 — 거기서 습관적으로 `☁️ 올리기`를 누르면 **낡은 데이터가
     드라이브를 덮어쓴다.** 며칠 뒤 정리 예정: `ALLOWED_ORIGINS`·OAuth 원본에서 옛 주소
     제거 + `gh-pages` 브랜치 삭제
+  - ⏳ **아직 안 했다 (2026-08-25 확인).** "며칠 뒤"라고 적은 지 8일이 지났고 옛 주소는
+    여전히 살아 있다. 이사는 08-17에 끝났으므로 **남겨둘 이유는 이미 없다**
 
 ### 이전 상태 (2026-08-07 기준)
 
@@ -335,9 +366,17 @@ export const loadChannels = () => loadJSON(KEYS.channels, []);  // 배열을 즉
 | `watched` | 본 영상 기록 `{영상ID: 본시각}`, 상한 1000 |
 | `laterPool` | 나중에 볼 풀 `{영상ID: {제목·링크·채널·날짜·담은시각·출처}}` |
 | `playlistId` | watchme 재생목록 ID |
+| `myFeedback` | 내가 보낸 의견의 **사본** 20건 (08-20). 원본은 Neon |
+| `feedbackDraft` | 보내다 만 글 (08-20). **쓸 때마다** 저장한다 — 탭을 옮기면 화면이 언마운트되므로 |
+| `subsCache` | 구독 목록 캐시 (없어도 됨) |
+
+⚠️ `channelCache`·`subsCache`·`myFeedback`·`feedbackDraft` 넷은 **`exportAll`에서 빠진다**
+(=드라이브로 안 나간다). 다만 **이유가 두 갈래다**:
+- 앞의 둘 — *다시 만들 수 있는 것은 계약에 넣지 않는다* (Worker가·구글이 다시 준다)
+- 뒤의 둘 — 다시 만들 수 있어서가 아니라 **원본이 내 서버에 있어서**다
 
 ⚠️ 브라우저 데이터를 지우면 전부 사라진다. **유일한 사본은 드라이브 `appDataFolder`의 JSON 한 장이다**
-(2026-08-07에 백업 파일을 지운 뒤로). → ⚙️ 설정의 `☁️ 올리기`. `channelCache`만 빠지고 나머지 4개가 담긴다.
+(2026-08-07에 백업 파일을 지운 뒤로). → ⚙️ 설정의 `☁️ 올리기`. 위 표에서 **캐시·사본을 뺀 4개**(`myChannels`·`watched`·`laterPool`·`playlistId`)가 담긴다.
 **올리려면 로그인이 필요하다** — 로그인 없이 쓰는 동안은 이 기기에만 있다.
 
 이 표의 키는 전부 `src/lib/storage.ts`의 `KEYS`에 모여 있다. **내보내기·로그인 때 이 파일만 보면 된다.**
@@ -345,7 +384,10 @@ export const loadChannels = () => loadJSON(KEYS.channels, []);  // 배열을 즉
 
 ## 설계 원칙 (판단이 필요할 때 기준)
 
-1. **필요한 것만 그때그때. 아프기 전엔 도입 안 한다.** (프레임워크·백엔드 다 이 기준으로 보류 중)
+1. **필요한 것만 그때그때. 아프기 전엔 도입 안 한다.**
+   → ✅ 둘 다 **아파서 들였다**: 프레임워크는 2026-08-17(React), 백엔드는 2026-08-20(Functions+Neon).
+   ⭐ 프레임워크 쪽은 **"지금 화면"이 아니라 "곧 할 작업"이 아팠던 것**이고(검색 UI·구독 분리가
+   전부 채널 화면에 얹힌다), 백엔드 쪽은 **테스터 4명**이 신호등이었다.
 2. **계약을 밖에 둔다.** 데이터 쪽↔화면은 정해진 JSON 모양으로만 대화 → 한쪽을 바꿔도 다른 쪽 무사.
    (예전엔 파이썬↔화면이 `data.json`으로, 지금은 Worker↔화면이 같은 모양으로 대화한다.
    **수집기를 통째로 갈아치웠는데 화면이 안 깨진 게 이 원칙의 증거다.**)

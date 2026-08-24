@@ -4,7 +4,7 @@
 
 | 키 | 프로젝트 | 한 줄 | 문서 |
 |---|---|---|---|
-| `youtube-feed` | 유튜브 정보 수집기 | 관심 채널 최신 영상을 모아 폰에서 보는 정적 사이트 (+개인화) | `youtube-feed/` |
+| `youtube-feed` | 유튜브 정보 수집기 | 관심 채널 최신 영상을 모아 폰에서 보는 사이트 (+개인화). 2026-08-20에 백엔드가 붙어 **더는 순수 정적이 아니다** | `youtube-feed/` |
 | `claude-code-mastery` | Claude Code 숙련 트랙 | agent coding을 바닥부터 쌓는 학습 트랙 (youtube-feed와 병행) | `claude-code-mastery/` |
 
 ## 문서 작성 규칙
