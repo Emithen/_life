@@ -1,6 +1,6 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `293e70b` · 2026-08-21
+> 기준: youtube-feed `ee8a42c` · 2026-08-25
 
 ## 한 줄
 
@@ -15,10 +15,11 @@
 - 스택: **React + Vite + TypeScript + Tailwind** (2026-08-17 이식, 그전엔 바닐라 JS)
   + **Vercel Functions(TS) + Neon Postgres** (2026-08-20)
 
-> ⚠️ **옛 주소 `emithen.github.io/youtube-feed/` 도 아직 살아 있다.** gh-pages 브랜치는
-> publish 워크플로를 지운 뒤로 아무도 안 밀어서 마지막 상태 그대로 서빙된다.
-> **localStorage가 origin별로 격리**돼 있어 데이터 이사(옛 주소 `☁️ 올리기` →
-> 새 주소 `내려받기`)가 끝날 때까지 필요하다. 끝나면 gh-pages를 지운다.
+> ✅ **옛 주소 `emithen.github.io/youtube-feed/` 는 2026-08-25에 정리했다.** gh-pages
+> 브랜치(`b1177c6`)를 지워 이제 **404**다. 이사(옛 주소 `☁️ 올리기` → 새 주소 `내려받기`)가
+> 끝날 때까지만 필요했고 — **localStorage가 origin별로 격리**되기 때문이다 — 08-17에 끝나면서
+> 남는 건 사고 경로뿐이었다(옛 사이트에서 올리기를 누르면 낡은 데이터가 드라이브를 덮는다).
+> Worker `ALLOWED_ORIGINS`에서도 뺐다(`ee8a42c`).
 
 ## 저장소가 2개다 (중요 — 자주 헷갈리는 지점)
 
@@ -187,8 +188,9 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
     드라이브에도 접근된다 — 거기서 습관적으로 `☁️ 올리기`를 누르면 **낡은 데이터가
     드라이브를 덮어쓴다.** 며칠 뒤 정리 예정: `ALLOWED_ORIGINS`·OAuth 원본에서 옛 주소
     제거 + `gh-pages` 브랜치 삭제
-  - ⏳ **아직 안 했다 (2026-08-25 확인).** "며칠 뒤"라고 적은 지 8일이 지났고 옛 주소는
-    여전히 살아 있다. 이사는 08-17에 끝났으므로 **남겨둘 이유는 이미 없다**
+  - ✅ **2026-08-25에 처리했다** (`ee8a42c`). gh-pages 삭제 + Worker `ALLOWED_ORIGINS`에서
+    옛 주소 제거. 확인: 옛 주소 404 · 새 주소 200.
+    ⬜ 구글 OAuth "승인된 JavaScript 원본"의 옛 주소는 **콘솔에서 따로** 지운다
 
 ### 이전 상태 (2026-08-07 기준)
 
