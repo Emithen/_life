@@ -1,13 +1,15 @@
 # youtube-feed — 개요 (지도)
 
-> 기준: youtube-feed `ee8a42c` · 2026-08-25
+> 기준: youtube-feed `c54eaef` · 2026-08-29
 
 ## 한 줄
 
 관심 유튜브 채널의 최신 영상을 모아 **폰에서 열어보는 사이트**.
 "내가 만들어서 내가 쓴다"가 목표라 서버·계정 없이 무료로 굴러가게 설계했다.
 → ⚠️ **2026-08-20에 그 전제의 절반이 깨졌다.** 테스터 4명이 생기면서 서버가 필요해졌고,
-   지금은 **Vercel Functions + Neon Postgres**가 붙어 있다(아직 "의견 남기기" 하나만).
+   지금은 **Vercel Functions + Neon Postgres**가 붙어 있다.
+   → ⚠️ **2026-08-25에 나머지 절반도 깨졌다.** 「계정」이 생겼다 — 서버가 구글 인가 코드를
+   교환해 신원(`sub`)을 확인하고 **자기 세션 쿠키를 발급한다**(`app_user`·`session`).
    무료인 것은 그대로다.
 
 - 라이브: https://youtube-feed-mu.vercel.app/
@@ -45,8 +47,11 @@ youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.t
         ├─ 페이지가 열리면 React 앱이 내 Worker를 불러 영상 목록을 실시간으로 받아옴
         │  (로그인했다면 풀 채우기는 유튜브 Data API를 브라우저가 직접 부른다)
         │
-        └─ 「💬 의견」을 보내면 같은 저장소의 api/*.ts 가 **함수로** 떠서 Neon에 넣는다
-           (2026-08-20 추가. 요청이 올 때만 뜨고 끝나면 사라진다)
+        ├─ 「💬 의견」을 보내면 같은 저장소의 api/*.ts 가 **함수로** 떠서 Neon에 넣는다
+        │  (2026-08-20 추가. 요청이 올 때만 뜨고 끝나면 사라진다)
+        │
+        └─ 로그인하면 팝업이 **인가 코드**만 받아 /api/auth 로 보낸다 → 서버가 구글과
+           코드를 교환해 sub를 꺼내고, 세션 쿠키(sid, HttpOnly)를 심는다 (2026-08-25)
 ```
 
 - 서버가 상시 떠 있지 않다 → **무료·관리 0**. 함수도 마찬가지다(요청 때만 뜬다)
@@ -109,12 +114,16 @@ youtube-feed [main 브랜치]  ← 소스: index.html, src/**/*.tsx, src/lib/*.t
 | `src/index.css` | Tailwind + **색 토큰 7개를 `@theme`으로.** 토큰이 곧 클래스 이름이 된다 |
 | `src/lib/worker.ts` | **Worker를 부르는 유일한 창구.** URL 조립·에러 규약 |
 | `src/lib/storage.ts` | **localStorage에 저장되는 모든 것.** 키·읽기·쓰기. ⚠️ `channelCache`·`subsCache`(캐시)와 `myFeedback`·`feedbackDraft`(원본이 서버에 있음)는 **`exportAll`에서 빠진다**. ⚠️ `authToken`은 **일부러 여기 없다** — 넣으면 드라이브로 올라간다 |
-| `src/lib/youtube.ts` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다 |
+| `src/lib/youtube.ts` | **구글 로그인(OAuth) + 유튜브 Data API 직접 호출.** **토큰을 쥔 유일한 파일** — 밖으로는 `authedFetch(url, init)`만 빌려준다. 08-25에 **토큰 모델 → 코드 모델**(코드만 받아 `/api/auth`로 넘긴다) |
 | `src/lib/drive.ts` | 구글 드라이브 `appDataFolder` 읽고 쓰기 (`findFile`/`load`/`save`). 토큰은 안 쥔다 |
 | `src/lib/feedback.ts` | **내 서버를 부르는 창구** (08-20). `lib/worker.ts`의 형제 — 에러 규약도 같은 모양 |
 | `src/lib/types.ts` | 계약을 타입으로. **새 규칙이 아니라 이 문서들에 이미 글로 있던 것**을 컴파일러도 읽게 한 것 |
 | `src/lib/video.ts` | 영상 한 편을 읽는 규칙 (`videoKey`·`isNew`) |
+| `src/lib/oauth-config.ts` | **화면과 서버가 같이 읽는 상수** (`CLIENT_ID`·`ALLOWED_ORIGINS`, 08-25). ⚠️ 브라우저 것(`window`·DOM 타입)을 넣으면 서버가 import를 못 한다 |
 | `api/feedback.ts` | **이 앱의 첫 서버 코드** (08-20). 의견 한 건을 검증해 Neon에 넣는다. ⚠️ **Vercel이 이 폴더를 함수로 자동 인식**한다 — 빌드 산출물이 아니라 별도 런타임 |
+| `api/auth.ts` | **서버가 "누구인지"를 판단하는 곳** (08-25). 인가 코드 교환 → `sub` → 세션 쿠키. 로그아웃(DELETE)은 **서버 세션까지** 끊는다 → `10-flow-and-contracts.md` 2-c |
+| `db/002_auth.sql` | `app_user`(`google_sub` unique) + `session`(`token_hash`는 **sha256만**). ⛔ `refresh_token` 칸은 **일부러 없다** |
+| `api/tsconfig.json` · `.npmrc` | `api/`의 타입 검사를 **로컬과 Vercel이 같은 파일 하나로** 읽게 하는 곳 (08-25). 없으면 배포에서 검사가 **조용히 꺼진다** → 90-gotchas 31 |
 | `db/001_feedback.sql` | 스키마. ⚠️ **마이그레이션 도구는 아직 안 쓴다** — 파일명의 번호가 순서고 Neon 콘솔에서 **손으로** 실행한다 (신호등: 테이블이 서넛이 되거나 되돌릴 일이 생길 때) |
 | `.env.example` | 환경변수의 **모양만** 보여주는 견본(값 없음, 커밋됨). 실제 값은 `.env`(로컬)와 Vercel 대시보드(배포). ⚠️ 대시보드에서 고치면 **재배포해야 적용된다** |
 | `vercel.json` | `framework`·`regions`. **자동으로 정해지는 값을 파일에 못 박는 곳** (90-gotchas 28·29) |
@@ -142,6 +151,8 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
    │                 (바깥: 원격 저장소)
    ├────import────▶  feedback.ts ──▶  /api/feedback ──▶ Neon    (2026-08-20)
    │                 (바깥: 네트워크 — 내 서버)
+   │                 youtube.ts ───▶  /api/auth ────────▶ Neon    (2026-08-25)
+   │                 (로그인만. 코드를 넘기고 세션 쿠키를 받는다)
    └────import────▶  storage.js  ──▶  localStorage
                      (바깥: 저장소)
 ```
@@ -164,7 +175,21 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
 ⭐ **"더 늘면 그게 빌드 단계를 들일 신호다"라고 적어둔 그 신호가 실제로 켜져서 Vite를 들였다** —
 숫자가 4에서 6이 된 것이 근거였다 → `90-gotchas.md` 2번
 
-## 지금 상태 (2026-08-21)
+## 지금 상태 (2026-08-25)
+
+- ✅ **인증 — 서버가 처음으로 «누구인지»를 안다** (08-25, `46bf295`·`99bc2eb`·`04ab226`)
+  로드맵 5번(스키마 + 상호작용 단위 저장)의 1~3단계다. 계약·근거는 `10-flow-and-contracts.md` 2-c절
+  - **토큰 모델 → 코드 모델**: 브라우저는 인가 코드만 받고 교환은 `/api/auth`가 한다
+    (그전 응답엔 `id_token`이 없어서 **신원을 알 길이 없었다**)
+  - ⭐ **내가 발급하는 첫 자격증명**이 생겼다(세션 쿠키 `sid`, HttpOnly·30일).
+    지금까지는 전부 구글 것을 받아 쓰는 것이었다
+  - 로그아웃이 **두 곳**(브라우저 + 서버 세션)을 끈다. 반쪽이면 반쪽이라고 말한다
+  - ⛔ refresh 토큰은 **받아서 버린다**(끌 방법이 없다). 🚦 그 대가로 **동의 화면이 매번 뜨고**,
+    신호등이 켜졌다 → `30-cors-and-relay.md` 2절 끝
+  - ⬜ **아직 DB엔 사용자·세션뿐이다.** 내 데이터(`myChannels`·`watched`·`laterPool`) 테이블은
+    `003`에서 만든다 — 인증이 먼저 서야 그것들이 누구 것인지 말할 수 있다
+- ✅ **`api/` 타입 검사를 다시 켰다** (08-25, `c54eaef`) — 배포에서 **통째로 꺼져 있었다.**
+  실패해도 배포를 막지 않는 단계라 로그로만 흘렀다 → `90-gotchas.md` 31번
 
 - ✅ **백엔드 배포** (08-20, `d433bf0`) — Vercel Functions + Neon Postgres.
   첫 손님은 **「💬 의견」 탭** 하나다. 계약·프라이버시 선은 `10-flow-and-contracts.md` 2-b절
@@ -277,11 +302,14 @@ app.js  ──import──▶  worker.js   ──▶  내 Worker  ──▶  유
   내 재생목록 골라 쓰기(`playlists.list?mine=true`), RSS 에러 계약 정리(404·0개가 전부 502로 뭉개진다),
   채널당 3개 + 「더보기」, `@핸들 → channel_id`를 `channels.list?forHandle`로 이전, 썸네일
 
-> **"로그인"이 두 가지라 헷갈리기 쉽다.**
-> ① **구글 OAuth**(완료) = 내 유튜브 데이터를 읽을 인가. 백엔드 불필요.
+> **"로그인"이 이제 세 가지라 헷갈리기 쉽다.**
+> ① **구글 OAuth**(완료) = 내 유튜브 데이터를 읽을 인가. 여기까진 백엔드 불필요였다.
 > ② **기기 동기화**(수동 완료 08-05, 자동은 미착수) = 내 앱 데이터를 브라우저 밖에 두는 것.
 > 로드맵에 한 덩어리로 적혀 있었으나 서로 다른 물건이고, ①만으로 L5가 되지는 않는다.
 > 단 2026-08-04에 ②를 Drive로 정하면서 **①의 토큰을 ②가 그대로 물려쓰게 됐다 → 두 번째 로그인은 없다.**
+> ③ **앱 세션**(08-25 신설) = **내 서버가 나를 알아보는 것**(쿠키 `sid`). ①이 «구글에게 나를
+> 증명하는 것»이라면 ③은 «내 서버가 발급한 신분증»이다. 사용자에겐 여전히 버튼 하나지만,
+> 코드에선 셋이 다른 물건이다 — ①의 토큰은 `authToken`(localStorage), ③은 **JS가 못 읽는 쿠키**다.
 
 ## 국면 B(기기 동기화) — 결정과 경과 (2026-08-02 → 08-04 → **08-05 수동 완료**)
 
@@ -371,6 +399,10 @@ export const loadChannels = () => loadJSON(KEYS.channels, []);  // 배열을 즉
 | `myFeedback` | 내가 보낸 의견의 **사본** 20건 (08-20). 원본은 Neon |
 | `feedbackDraft` | 보내다 만 글 (08-20). **쓸 때마다** 저장한다 — 탭을 옮기면 화면이 언마운트되므로 |
 | `subsCache` | 구독 목록 캐시 (없어도 됨) |
+| `authToken` | 구글 액세스 토큰(08-15부터 여기 둔다). ⚠️ **이 키만 `storage.ts` 밖**(`youtube.ts`)이고 `exportAll`에 **절대 안 실린다** |
+
+⭐ **앱 세션 쿠키(`sid`, 08-25)는 이 표에 없다.** HttpOnly라 JS가 못 읽고 localStorage에도
+없다 — 브라우저가 쥐고 요청에 알아서 실어 보낸다.
 
 ⚠️ `channelCache`·`subsCache`·`myFeedback`·`feedbackDraft` 넷은 **`exportAll`에서 빠진다**
 (=드라이브로 안 나간다). 다만 **이유가 두 갈래다**:

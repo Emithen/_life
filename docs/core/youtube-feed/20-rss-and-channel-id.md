@@ -1,6 +1,6 @@
 # RSS와 channel_id 플로우
 
-> 기준: youtube-feed `293e70b` · 2026-08-21
+> 기준: youtube-feed `c54eaef` · 2026-08-29 (그 사이 변경은 백엔드·인증·빌드 설정뿐 — 이 문서 범위와 무관)
 
 ## 1. RSS란
 

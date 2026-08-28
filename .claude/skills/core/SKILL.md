@@ -28,6 +28,7 @@ description: 이 저장소의 프로젝트별 코어 로직·구조·설계 판�
 |---|---|
 | 데이터 흐름, 배치 vs 실시간, 계약(JSON 모양) | `10-flow-and-contracts.md` |
 | **백엔드·DB·서버 API, 의견 남기기, 레이트 리밋** | `10-flow-and-contracts.md` (2-b절) |
+| **로그인·인증·세션·쿠키, 구글 OAuth 코드 교환** | `10-flow-and-contracts.md` (2-c절) |
 | RSS가 뭔지, channel_id 찾는 과정, @핸들, **죽은 채널 판정** | `20-rss-and-channel-id.md` |
 | CORS, 프록시, Cloudflare Worker, 캐싱 | `30-cors-and-relay.md` |
 | 화면 구조, 라우팅, UI/디자인 시스템, 구독≠피드 | `40-screens-and-ui.md` |
@@ -40,7 +41,7 @@ description: 이 저장소의 프로젝트별 코어 로직·구조·설계 판�
 각 문서 헤더에 `기준: <저장소> <커밋>` 이 적혀 있다. 현재와 비교한다:
 
 ```bash
-git -C /Users/soggyfries/Desktop/_life/youtube-feed log --oneline <기준커밋>..HEAD | head -20
+git -C youtube-feed log --oneline <기준커밋>..HEAD | head -20
 ```
 
 - 차이가 없으면 아무 말도 하지 않는다.

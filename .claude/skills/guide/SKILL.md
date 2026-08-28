@@ -13,7 +13,7 @@ description: 이 저장소에서 쓸 수 있는 스킬들을 용도별로 안내
 ### 1. 스킬 목록 수집 (명령 1회)
 
 ```bash
-cd /Users/soggyfries/Desktop/_life && for f in .claude/skills/*/SKILL.md claude-code-mastery/.claude/skills/*/SKILL.md; do [ -f "$f" ] && echo "--- $f" && sed -n '2,3p' "$f"; done
+for f in .claude/skills/*/SKILL.md claude-code-mastery/.claude/skills/*/SKILL.md; do [ -f "$f" ] && echo "--- $f" && sed -n '2,3p' "$f"; done
 ```
 
 `name`과 `description`만 뽑으면 된다. 본문은 읽지 않는다(토큰 낭비).
